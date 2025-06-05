@@ -13,4 +13,5 @@ router = APIRouter()
 # Include all sub-routers
 router.include_router(calls_router)
 router.include_router(agents_router)
-router.include_router(ringover_webhooks_router, prefix="/webhooks/ringover", tags=["webhooks"])
+router.include_router(ringover_webhooks_router,
+                      prefix="/webhooks/ringover", tags=["webhooks"])

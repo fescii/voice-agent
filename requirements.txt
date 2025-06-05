@@ -8,6 +8,7 @@ httpx>=0.25.2
 
 # Data Validation and Settings
 pydantic>=2.5.0
+pydantic-settings>=2.1.0
 python-multipart>=0.0.6
 
 # Database and Storage

@@ -23,48 +23,49 @@ async def save_transcript(
     segment_id: Optional[str] = None,
     **kwargs
 ) -> Optional[Transcript]:
-    """
-    Save a transcript segment.
-    
-    Args:
-        session: Database session
-        call_log_id: Associated call log ID
-        speaker: Speaker identifier (caller, agent, system)
-        text: Transcribed text
-        start_time: Start time in seconds from call start
-        end_time: End time in seconds from call start
-        confidence_score: STT confidence score
-        segment_id: Unique segment identifier
-        **kwargs: Additional metadata
-        
-    Returns:
-        Created Transcript instance or None if failed
-    """
-    try:
-        transcript = Transcript(
-            call_log_id=call_log_id,
-            speaker=speaker,
-            text=text,
-            start_time=start_time,
-            end_time=end_time,
-            confidence_score=confidence_score,
-            segment_id=segment_id,
-            timestamp=datetime.utcnow(),
-            **kwargs
-        )
-        
-        session.add(transcript)
-        await session.commit()
-        await session.refresh(transcript)
-        
-        logger.debug(f"Saved transcript segment for call {call_log_id}")
-        return transcript
-        
-    except SQLAlchemyError as e:
-        logger.error(f"Failed to save transcript for call {call_log_id}: {e}")
-        await session.rollback()
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error saving transcript for call {call_log_id}: {e}")
-        await session.rollback()
-        return None
+  """
+  Save a transcript segment.
+
+  Args:
+      session: Database session
+      call_log_id: Associated call log ID
+      speaker: Speaker identifier (caller, agent, system)
+      text: Transcribed text
+      start_time: Start time in seconds from call start
+      end_time: End time in seconds from call start
+      confidence_score: STT confidence score
+      segment_id: Unique segment identifier
+      **kwargs: Additional metadata
+
+  Returns:
+      Created Transcript instance or None if failed
+  """
+  try:
+    transcript = Transcript(
+        call_log_id=call_log_id,
+        speaker=speaker,
+        text=text,
+        start_time=start_time,
+        end_time=end_time,
+        confidence_score=confidence_score,
+        segment_id=segment_id,
+        timestamp=datetime.utcnow(),
+        **kwargs
+    )
+
+    session.add(transcript)
+    await session.commit()
+    await session.refresh(transcript)
+
+    logger.debug(f"Saved transcript segment for call {call_log_id}")
+    return transcript
+
+  except SQLAlchemyError as e:
+    logger.error(f"Failed to save transcript for call {call_log_id}: {e}")
+    await session.rollback()
+    return None
+  except Exception as e:
+    logger.error(
+        f"Unexpected error saving transcript for call {call_log_id}: {e}")
+    await session.rollback()
+    return None

@@ -38,31 +38,33 @@ AsyncSessionLocal = sessionmaker(
 )
 
 # Session dependency for FastAPI
+
+
 @asynccontextmanager
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Get async database session
-    
-    Yields:
-        AsyncSession: Database session
-    """
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+  """
+  Get async database session
+
+  Yields:
+      AsyncSession: Database session
+  """
+  async with AsyncSessionLocal() as session:
+    try:
+      yield session
+      await session.commit()
+    except Exception:
+      await session.rollback()
+      raise
+    finally:
+      await session.close()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    FastAPI dependency to get database session
-    
-    Yields:
-        AsyncSession: Database session
-    """
-    async with get_db_session() as session:
-        yield session
+  """
+  FastAPI dependency to get database session
+
+  Yields:
+      AsyncSession: Database session
+  """
+  async with get_db_session() as session:
+    yield session
