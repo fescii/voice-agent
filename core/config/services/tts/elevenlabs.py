@@ -2,7 +2,7 @@
 ElevenLabs TTS API configuration settings
 """
 import os
-from pydantic_settings import BaseSettings
+from pydantic import BaseSettings
 
 
 class ElevenLabsConfig(BaseSettings):
