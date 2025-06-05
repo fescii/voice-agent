@@ -27,10 +27,11 @@ class CustomFormatter(logging.Formatter):
     # Create formatted message
     if hasattr(record, 'call_id'):
       # Include call_id if present
+      call_id = getattr(record, 'call_id', 'N/A')
       log_format = (
           f"{self.COLORS.get(record.levelname, '')}"
           f"[{record.asctime}] {record.levelname:8} | "
-          f"CALL:{record.call_id} | {record.name} | {record.getMessage()}"
+          f"CALL:{call_id} | {record.name} | {record.getMessage()}"
           f"{self.COLORS['RESET']}"
       )
     else:

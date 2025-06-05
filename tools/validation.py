@@ -201,7 +201,7 @@ class SystemValidator:
       from data.db.models.calllog import CallLog
       from data.db.models.agentconfig import AgentConfig
       from data.db.models.transcript import Transcript
-      from data.db.models.userprofile import UserProfile
+      from data.db.models.user import UserProfile
 
       self.log_success("All database models imported successfully")
       return True
