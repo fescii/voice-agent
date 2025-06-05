@@ -1,0 +1,462 @@
+{
+  "name": "insurance_claims_full_flow",
+  "description": "Complete call flow for insurance claims handling with nodes and edges",
+  "version": "1.0",
+  "general_prompt": "You are a helpful insurance claims representative. Be professional, empathetic, and efficient in helping customers file and manage their claims.",
+  "starting_state": "greeting",
+  "states": [
+    {
+      "name": "greeting",
+      "type": "initial",
+      "prompt": "Welcome the caller to the insurance claims department. Introduce yourself as {agent_name} and ask how you can assist them today with their insurance claim needs. Be warm and professional.",
+      "description": "Initial greeting",
+      "metadata": {
+        "expected_duration": "short",
+        "required": true
+      }
+    },
+    {
+      "name": "authenticate",
+      "type": "information",
+      "prompt": "Ask the caller for their policy number and verification information (date of birth or last 4 digits of SSN) to authenticate them. Assure them this is for their security.",
+      "description": "Authenticate caller",
+      "metadata": {
+        "required_fields": [
+          "policy_number",
+          "verification"
+        ],
+        "security_level": "high"
+      }
+    },
+    {
+      "name": "claim_type",
+      "type": "decision",
+      "prompt": "Ask the caller what type of claim they're calling about. Listen carefully to determine if it's an auto claim, property claim, liability claim, or another type of claim covered by their policy.",
+      "description": "Determine claim type",
+      "metadata": {
+        "options": [
+          "auto",
+          "property",
+          "liability",
+          "other"
+        ]
+      }
+    },
+    {
+      "name": "new_claim",
+      "type": "decision",
+      "prompt": "Ask the caller if they're filing a new claim or following up on an existing claim. If they're filing a new claim, express empathy about the situation that led to their claim.",
+      "description": "Determine if new or existing claim",
+      "metadata": {
+        "options": [
+          "new",
+          "existing"
+        ]
+      }
+    },
+    {
+      "name": "existing_claim_details",
+      "type": "information",
+      "prompt": "Ask the caller for their existing claim number and verify their identity again if needed. Ask what specific aspect of their claim they need help with today.",
+      "description": "Get existing claim details",
+      "metadata": {
+        "required_fields": [
+          "claim_number"
+        ]
+      }
+    },
+    {
+      "name": "claim_status_check",
+      "type": "processing",
+      "prompt": "Tell the caller you're checking the status of their claim. Provide details on the current status, any pending actions, and next steps. Be specific about timeframes when possible.",
+      "description": "Check claim status",
+      "metadata": {
+        "expected_duration": "medium",
+        "system_integration": "claims_database"
+      }
+    },
+    {
+      "name": "auto_claim_details",
+      "type": "information",
+      "prompt": "Collect details about the auto incident. Ask about the date and time of the incident, location, vehicles involved, injuries if any, police report information, and a description of what happened.",
+      "description": "Collect auto claim details",
+      "metadata": {
+        "required_fields": [
+          "incident_date",
+          "location",
+          "vehicles_involved",
+          "police_report"
+        ]
+      }
+    },
+    {
+      "name": "property_claim_details",
+      "type": "information",
+      "prompt": "Collect details about the property damage. Ask about the date of incident, type of damage, cause of damage, estimated value of loss, and if temporary repairs have been made.",
+      "description": "Collect property claim details",
+      "metadata": {
+        "required_fields": [
+          "incident_date",
+          "damage_type",
+          "damage_cause",
+          "estimated_value"
+        ]
+      }
+    },
+    {
+      "name": "liability_claim_details",
+      "type": "information",
+      "prompt": "Collect details about the liability incident. Ask about the date of the incident, parties involved, nature of liability, any injuries or damages, and if any legal action has been initiated.",
+      "description": "Collect liability claim details",
+      "metadata": {
+        "required_fields": [
+          "incident_date",
+          "parties_involved",
+          "liability_nature",
+          "legal_status"
+        ]
+      }
+    },
+    {
+      "name": "other_claim_details",
+      "type": "information",
+      "prompt": "Listen carefully to understand the nature of this claim. Ask relevant questions to gather all necessary details based on the type of claim being filed.",
+      "description": "Collect other claim details",
+      "metadata": {
+        "flexible": true,
+        "requires_supervisor_review": true
+      }
+    },
+    {
+      "name": "coverage_verification",
+      "type": "processing",
+      "prompt": "Inform the caller that you're checking their policy coverage details related to this claim. Explain what is covered and what limitations or deductibles may apply.",
+      "description": "Verify coverage",
+      "metadata": {
+        "expected_duration": "medium",
+        "system_integration": "policy_database"
+      }
+    },
+    {
+      "name": "document_requirements",
+      "type": "information",
+      "prompt": "Explain what documents the caller needs to provide to support their claim. Ask how they prefer to submit these documents (email, app, mail, etc.) and provide specific instructions.",
+      "description": "Explain required documentation",
+      "metadata": {
+        "documentation_types": [
+          "photos",
+          "reports",
+          "estimates",
+          "invoices"
+        ]
+      }
+    },
+    {
+      "name": "claim_filing",
+      "type": "processing",
+      "prompt": "Tell the caller you're filing their claim now. Create a sense of action and progress. Provide them with their new claim number and explain how to reference it in future communications.",
+      "description": "File the claim",
+      "metadata": {
+        "expected_duration": "medium",
+        "system_integration": "claims_processing"
+      }
+    },
+    {
+      "name": "next_steps",
+      "type": "information",
+      "prompt": "Clearly explain the next steps in the claims process. Include timeframes when possible, what the caller should expect, and what actions they need to take.",
+      "description": "Explain next steps",
+      "metadata": {
+        "expected_duration": "medium"
+      }
+    },
+    {
+      "name": "adjuster_assignment",
+      "type": "information",
+      "prompt": "Inform the caller about their assigned claims adjuster or when they can expect to be contacted by one. Provide the adjuster's name and contact information if available.",
+      "description": "Provide adjuster information",
+      "metadata": {
+        "expected_duration": "short"
+      }
+    },
+    {
+      "name": "additional_questions",
+      "type": "decision",
+      "prompt": "Ask if the caller has any additional questions about their claim or the claims process that you can help with today.",
+      "description": "Check for additional questions",
+      "metadata": {
+        "expected_duration": "variable"
+      }
+    },
+    {
+      "name": "escalation_needed",
+      "type": "decision",
+      "prompt": "Based on the complexity of the claim or caller's concerns, determine if the call needs to be escalated to a supervisor or specialist. Explain why you're recommending escalation.",
+      "description": "Determine if escalation is needed",
+      "metadata": {
+        "expected_duration": "short",
+        "requires_judgment": true
+      }
+    },
+    {
+      "name": "escalate_call",
+      "type": "processing",
+      "prompt": "Inform the caller that you'll be transferring them to a supervisor or specialist who can better assist with their specific situation. Explain the reason for the transfer and assure them it will help resolve their issue more effectively.",
+      "description": "Escalate to supervisor",
+      "metadata": {
+        "expected_duration": "short"
+      }
+    },
+    {
+      "name": "satisfaction_check",
+      "type": "decision",
+      "prompt": "Ask if the caller is satisfied with the help they've received today and if all their questions have been answered sufficiently.",
+      "description": "Check caller satisfaction",
+      "metadata": {
+        "expected_duration": "short"
+      }
+    },
+    {
+      "name": "closing",
+      "type": "terminal",
+      "prompt": "Thank the caller for contacting the claims department. Remind them of their claim number (if applicable), how to reach their adjuster, and where to find additional information. Wish them well and conclude the call professionally.",
+      "description": "Close the conversation",
+      "metadata": {
+        "expected_duration": "short",
+        "required": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from_state": "greeting",
+      "to_state": "authenticate",
+      "description": "Begin authentication after greeting"
+    },
+    {
+      "from_state": "authenticate",
+      "to_state": "new_claim",
+      "description": "Determine if new or existing claim after authentication",
+      "condition": {
+        "type": "entity_complete",
+        "value": [
+          "policy_number",
+          "verification"
+        ],
+        "operator": "all_present"
+      }
+    },
+    {
+      "from_state": "new_claim",
+      "to_state": "claim_type",
+      "description": "Determine claim type for new claim",
+      "condition": {
+        "type": "intent",
+        "value": "new_claim",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "new_claim",
+      "to_state": "existing_claim_details",
+      "description": "Get existing claim details",
+      "condition": {
+        "type": "intent",
+        "value": "existing_claim",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "existing_claim_details",
+      "to_state": "claim_status_check",
+      "description": "Check status after getting claim number",
+      "condition": {
+        "type": "entity_complete",
+        "value": [
+          "claim_number"
+        ],
+        "operator": "all_present"
+      }
+    },
+    {
+      "from_state": "claim_status_check",
+      "to_state": "additional_questions",
+      "description": "Check for questions after providing claim status"
+    },
+    {
+      "from_state": "claim_type",
+      "to_state": "auto_claim_details",
+      "description": "Collect auto claim details",
+      "condition": {
+        "type": "intent",
+        "value": "auto_claim",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "claim_type",
+      "to_state": "property_claim_details",
+      "description": "Collect property claim details",
+      "condition": {
+        "type": "intent",
+        "value": "property_claim",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "claim_type",
+      "to_state": "liability_claim_details",
+      "description": "Collect liability claim details",
+      "condition": {
+        "type": "intent",
+        "value": "liability_claim",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "claim_type",
+      "to_state": "other_claim_details",
+      "description": "Collect other claim details",
+      "condition": {
+        "type": "intent",
+        "value": "other_claim",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "auto_claim_details",
+      "to_state": "coverage_verification",
+      "description": "Verify coverage after collecting details",
+      "condition": {
+        "type": "entity_complete",
+        "value": [
+          "incident_date",
+          "location",
+          "vehicles_involved"
+        ],
+        "operator": "all_present"
+      }
+    },
+    {
+      "from_state": "property_claim_details",
+      "to_state": "coverage_verification",
+      "description": "Verify coverage after collecting details",
+      "condition": {
+        "type": "entity_complete",
+        "value": [
+          "incident_date",
+          "damage_type",
+          "damage_cause"
+        ],
+        "operator": "all_present"
+      }
+    },
+    {
+      "from_state": "liability_claim_details",
+      "to_state": "coverage_verification",
+      "description": "Verify coverage after collecting details",
+      "condition": {
+        "type": "entity_complete",
+        "value": [
+          "incident_date",
+          "parties_involved",
+          "liability_nature"
+        ],
+        "operator": "all_present"
+      }
+    },
+    {
+      "from_state": "other_claim_details",
+      "to_state": "coverage_verification",
+      "description": "Verify coverage after collecting details"
+    },
+    {
+      "from_state": "coverage_verification",
+      "to_state": "document_requirements",
+      "description": "Explain document requirements after verifying coverage"
+    },
+    {
+      "from_state": "document_requirements",
+      "to_state": "claim_filing",
+      "description": "File claim after explaining document requirements"
+    },
+    {
+      "from_state": "claim_filing",
+      "to_state": "next_steps",
+      "description": "Explain next steps after filing claim"
+    },
+    {
+      "from_state": "next_steps",
+      "to_state": "adjuster_assignment",
+      "description": "Provide adjuster information after explaining next steps"
+    },
+    {
+      "from_state": "adjuster_assignment",
+      "to_state": "additional_questions",
+      "description": "Check for additional questions after providing all information"
+    },
+    {
+      "from_state": "additional_questions",
+      "to_state": "escalation_needed",
+      "description": "Check if escalation is needed",
+      "condition": {
+        "type": "intent",
+        "value": "has_questions",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "additional_questions",
+      "to_state": "satisfaction_check",
+      "description": "Check satisfaction if no more questions",
+      "condition": {
+        "type": "intent",
+        "value": "no_questions",
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "escalation_needed",
+      "to_state": "escalate_call",
+      "description": "Escalate the call if needed",
+      "condition": {
+        "type": "confirmation",
+        "value": true,
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "escalation_needed",
+      "to_state": "satisfaction_check",
+      "description": "Check satisfaction if no escalation needed",
+      "condition": {
+        "type": "confirmation",
+        "value": false,
+        "operator": "equals"
+      }
+    },
+    {
+      "from_state": "escalate_call",
+      "to_state": "closing",
+      "description": "Close call after escalation"
+    },
+    {
+      "from_state": "satisfaction_check",
+      "to_state": "closing",
+      "description": "Close the call"
+    }
+  ],
+  "dynamic_variables": {
+    "agent_name": "Alex from Claims Support",
+    "company_name": "Reliable Insurance Company",
+    "support_hours": "8 AM to 8 PM Eastern Time, Monday through Saturday",
+    "support_phone": "1-888-555-CLAIM",
+    "support_website": "claims.reliableinsurance.example.com"
+  },
+  "metadata": {
+    "domain": "insurance",
+    "average_duration": "12-15 minutes",
+    "complexity": "high",
+    "success_criteria": "Claim properly filed or status provided with clear next steps"
+  }
+}

@@ -169,6 +169,47 @@ class PromptLLMAdapter:
             yield response.get_content()
     """
 
+  async def generate_response_with_script(
+      self,
+      script_name: str,
+      context: ConversationContext,
+      provider: str = "openai",
+      model: Optional[str] = None,
+      temperature: float = 0.7,
+      additional_variables: Optional[Dict[str, str]] = None
+  ) -> Optional[PromptedLLMResponse]:
+    """
+    Generate a response using a registered script by name.
+
+    Args:
+        script_name: Name of the script to use
+        context: Conversation context
+        provider: LLM provider to use
+        model: Specific model to use, or None for provider default
+        temperature: Temperature for response generation
+        additional_variables: Additional variables for the prompt
+
+    Returns:
+        LLM response with prompt details
+    """
+    try:
+      # Get the template associated with the script
+      template = self.prompt_manager.get_template(script_name)
+
+      # Generate response using the template
+      return await self.generate_response_with_prompt(
+          context=context,
+          template_name=script_name,
+          provider=provider,
+          model=model,
+          temperature=temperature,
+          additional_variables=additional_variables
+      )
+    except Exception as e:
+      logger.error(
+          f"Failed to generate response with script {script_name}: {e}")
+      return None
+
   def update_conversation_context(
       self,
       context: ConversationContext,
