@@ -7,13 +7,27 @@ import hmac
 import hashlib
 
 from models.external.ringover.webhook import RingoverWebhookEvent
-from services.call.management.supervisor import CallSupervisor
-from services.call.state.updater import CallStateUpdater
-from core.config.providers.ringover import RingoverConfig
+from services.call.management.orchestrator import CallOrchestrator
+from services.ringover import CallInfo, CallDirection, CallStatus
+from core.config.app import ConfigurationManager
+from core.config.providers.telephony import RingoverConfig, TelephonyProvider
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+# Global orchestrator instance
+_orchestrator: Optional[CallOrchestrator] = None
+
+
+def get_orchestrator() -> CallOrchestrator:
+  """Get or create call orchestrator instance."""
+  global _orchestrator
+  if _orchestrator is None:
+    config_manager = ConfigurationManager()
+    system_config = config_manager.get_configuration()
+    _orchestrator = CallOrchestrator(system_config)
+  return _orchestrator
 
 
 @router.post("/event")
@@ -38,9 +52,14 @@ async def handle_ringover_event(
     # Get raw body for signature verification
     body = await request.body()
 
-    # Verify webhook signature
-    ringover_config = RingoverConfig()
-    if not _verify_webhook_signature(body, x_ringover_signature, ringover_config.webhook_secret):
+    # Get system configuration for webhook verification
+    config_manager = ConfigurationManager()
+    system_config = config_manager.get_configuration()
+    webhook_secret = getattr(
+        system_config.telephony_config, 'webhook_secret', None)
+
+    # Verify webhook signature if secret is configured
+    if webhook_secret and not _verify_webhook_signature(body, x_ringover_signature, webhook_secret):
       logger.warning("Invalid webhook signature received")
       raise HTTPException(
           status_code=status.HTTP_401_UNAUTHORIZED,
@@ -109,31 +128,54 @@ def _verify_webhook_signature(body: bytes, signature: Optional[str], secret: str
 
 async def _route_webhook_event(event: RingoverWebhookEvent) -> None:
   """
-  Route webhook event to appropriate service handler
+  Route webhook event to call orchestrator for handling
 
   Args:
       event: Parsed webhook event
   """
-  supervisor = CallSupervisor()
-  state_updater = CallStateUpdater()
+  orchestrator = get_orchestrator()
+
+  logger.info(
+      f"Routing webhook event: {event.event_type} for call {event.call_id}")
 
   if event.event_type == "call_initiated":
-    await supervisor.handle_call_initiated(event)
+    # Handle outbound call initiated
+    logger.info(f"Call {event.call_id} initiated")
 
   elif event.event_type == "call_answered":
-    await supervisor.handle_call_answered(event)
-    await state_updater.update_call_status(event.call_id, "answered")
+    # Update call status and handle answer
+    logger.info(f"Call {event.call_id} answered")
 
   elif event.event_type == "call_ended":
-    await supervisor.handle_call_ended(event)
-    await state_updater.update_call_status(event.call_id, "ended")
+    # End call session
+    session_ids = [sid for sid, session in orchestrator.active_sessions.items()
+                   if session.call_info.call_id == event.call_id]
+    for session_id in session_ids:
+      await orchestrator.end_call(session_id)
+    logger.info(f"Call {event.call_id} ended")
 
   elif event.event_type == "call_failed":
-    await supervisor.handle_call_failed(event)
-    await state_updater.update_call_status(event.call_id, "failed")
+    # Handle call failure
+    session_ids = [sid for sid, session in orchestrator.active_sessions.items()
+                   if session.call_info.call_id == event.call_id]
+    for session_id in session_ids:
+      await orchestrator.end_call(session_id)
+    logger.warning(f"Call {event.call_id} failed")
 
   elif event.event_type == "incoming_call":
-    await supervisor.handle_incoming_call(event)
+    # Handle incoming call - try to extract call details from event data
+    call_info = CallInfo(
+        call_id=event.call_id,
+        phone_number=event.data.get("caller_number", "unknown"),
+        direction=CallDirection.INBOUND,
+        status=CallStatus.RINGING,
+        metadata=event.data
+    )
+    session_id = await orchestrator.handle_inbound_call(call_info)
+    if session_id:
+      logger.info(f"Incoming call handled, session: {session_id}")
+    else:
+      logger.warning(f"Failed to handle incoming call {event.call_id}")
 
   else:
     logger.warning(f"Unhandled webhook event type: {event.event_type}")

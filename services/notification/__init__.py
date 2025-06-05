@@ -3,11 +3,14 @@ Notification service module.
 """
 
 from .manager import NotificationManager
-from .channels import EmailChannel, WebhookChannel, SlackChannel
+# Import channel implementations from the modularized structure
+from .channels import EmailChannel, WebhookChannel, SlackChannel, SMSChannel, TeamsChannel
 
 __all__ = [
     "NotificationManager",
     "EmailChannel",
     "WebhookChannel",
-    "SlackChannel"
+    "SlackChannel",
+    "SMSChannel",
+    "TeamsChannel"
 ]

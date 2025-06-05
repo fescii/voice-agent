@@ -65,3 +65,29 @@ async def clear_expired_sessions() -> int:
   except Exception as e:
     logger.error(f"Failed to clear expired sessions: {e}")
     return 0
+
+
+async def delete_session_data(key: str) -> bool:
+  """
+  Delete generic session data from Redis.
+
+  Args:
+      key: Redis key to delete
+
+  Returns:
+      True if successful
+  """
+  try:
+    redis_client = await get_redis_client()
+    result = await redis_client.delete(key)
+
+    if result:
+      logger.debug(f"Deleted session data for key {key}")
+      return True
+    else:
+      logger.warning(f"No session data found for key {key}")
+      return False
+
+  except Exception as e:
+    logger.error(f"Failed to delete session data for key {key}: {e}")
+    return False

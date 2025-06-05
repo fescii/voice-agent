@@ -6,8 +6,9 @@ from fastapi.responses import JSONResponse
 from typing import Any
 
 from api.v1.schemas.request.call import CallInitiateRequest
-from api.v1.schemas.response.call import CallInitiateResponse
-from services.call.initiation.outbound import OutboundCallService
+from api.v1.schemas.response.call import CallInitiateResponse, CallStatus
+from services.call.management.orchestrator import CallOrchestrator
+from core.config.app import ConfigurationManager
 from core.security.auth.token import get_current_user
 from core.logging.setup import get_logger
 
@@ -37,19 +38,31 @@ async def initiate_outbound_call(
     logger.info(
         f"Initiating outbound call to {request.phone_number} for user {current_user}")
 
-    outbound_service = OutboundCallService()
-    call_result = await outbound_service.initiate_call(
-        phone_number=request.phone_number,
+    # Load system configuration
+    config_manager = ConfigurationManager()
+    system_config = config_manager.get_configuration()
+
+    # Initialize call orchestrator
+    call_orchestrator = CallOrchestrator(system_config)
+
+    # Initiate outbound call
+    session_id = await call_orchestrator.initiate_outbound_call(
+        to_number=request.phone_number,
         agent_id=request.agent_id,
-        caller_id=request.caller_id,
-        context=request.context
+        metadata=request.context or {}
     )
 
-    logger.info(f"Call initiated successfully with ID: {call_result.call_id}")
+    if not session_id:
+      raise HTTPException(
+          status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+          detail="Failed to initiate call - no available agents or configuration error"
+      )
+
+    logger.info(f"Call initiated successfully with session ID: {session_id}")
 
     return CallInitiateResponse(
-        call_id=call_result.call_id,
-        status=call_result.status,
+        call_id=session_id,
+        status=CallStatus.INITIATED,
         message="Call initiated successfully"
     )
 

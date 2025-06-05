@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.v1 import router as api_v1_router
-from core.config.app.main import AppConfig
+from core.config.appconfig.main import AppConfig
 from core.logging.setup import setup_logging
 from wss.endpoint import websocket_router
 
