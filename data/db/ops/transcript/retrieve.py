@@ -32,7 +32,7 @@ async def get_call_transcripts(
         .where(Transcript.call_log_id == call_log_id)
         .order_by(Transcript.timestamp)
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
   except SQLAlchemyError as e:
     logger.error(f"Failed to get transcripts for call {call_log_id}: {e}")
