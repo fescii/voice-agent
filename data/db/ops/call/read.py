@@ -6,8 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional, List, Dict, Any
 
-from ...models.calllog import CallLog, CallStatus
-from ....core.logging import get_logger
+from data.db.models.calllog import CallLog, CallStatus
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 

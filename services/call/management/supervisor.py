@@ -3,14 +3,15 @@ Call supervisor service for managing active calls.
 """
 from typing import Dict, Any, List, Optional
 import asyncio
+import uuid
 from datetime import datetime
 
-from ...data.db.ops.call import update_call_status, get_call_by_ringover_id
-from ...data.db.ops.agent import update_agent_call_count
-from ...data.redis.ops.session import get_call_session, update_call_session, delete_call_session
-from ...models.external.ringover.webhook import RingoverWebhookEvent
-from ...models.internal.callcontext import CallContext
-from ...core.logging import get_logger
+from data.db.ops.call import update_call_status, get_call_by_ringover_id
+from data.db.ops.agent import update_agent_call_count
+from data.redis.ops.session import get_call_session, update_call_session, delete_call_session, store_call_session
+from models.external.ringover.webhook import RingoverWebhookEvent
+from models.internal.callcontext import CallContext, CallDirection, CallStatus
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -91,13 +92,13 @@ class CallSupervisor:
 
       if success:
         # Update context
-        call_context.status = "answered"
-        call_context.answered_at = datetime.utcnow()
+        call_context.status = CallStatus.ANSWERED
+        call_context.start_time = datetime.utcnow()
 
         # Store updated context
         await update_call_session(
             call_id=call_context.call_id,
-            updates=call_context.dict()
+            session_data=call_context.dict()
         )
 
         # Register as active call
@@ -121,9 +122,9 @@ class CallSupervisor:
     try:
       # Calculate duration
       duration = None
-      if call_context.answered_at:
+      if call_context.start_time:
         duration = (datetime.utcnow() -
-                    call_context.answered_at).total_seconds()
+                    call_context.start_time).total_seconds()
 
       # Update call status
       success = await update_call_status(
@@ -238,9 +239,6 @@ class CallSupervisor:
         Created CallContext or None if failed
     """
     try:
-      from ...models.internal.callcontext import CallDirection, CallStatus
-      import uuid
-
       # Create call context
       call_context = CallContext(
           call_id=call_id,
@@ -250,6 +248,9 @@ class CallSupervisor:
           direction=CallDirection.OUTBOUND,
           status=CallStatus.INITIATED,
           start_time=datetime.utcnow(),
+          end_time=None,
+          duration=None,
+          ringover_call_id=None,
           websocket_id=websocket_id
       )
 
@@ -257,7 +258,6 @@ class CallSupervisor:
       self._active_calls[call_id] = call_context
 
       # Store session data
-      from ...data.redis.ops.session import store_call_session
       await store_call_session(call_id, call_context.dict())
 
       self.logger.info(f"Started call {call_id} with agent {agent_id}")
@@ -284,7 +284,6 @@ class CallSupervisor:
         return False
 
       # Update status
-      from ...models.internal.callcontext import CallStatus
       call_context.status = CallStatus.ENDED
       call_context.end_time = datetime.utcnow()
 

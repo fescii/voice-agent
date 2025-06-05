@@ -2,7 +2,7 @@
 Agent configuration database model.
 """
 from sqlalchemy import Column, String, Text, Boolean, JSON, Float
-from ..base import BaseModel
+from data.db.base import BaseModel
 
 
 class AgentConfig(BaseModel):

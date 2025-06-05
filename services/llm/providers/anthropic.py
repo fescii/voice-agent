@@ -3,16 +3,16 @@ Anthropic LLM Provider Implementation
 Handles Claude model interactions for the Voice Agent system.
 """
 
-from typing import List, Dict, Any, Optional, AsyncGenerator
+from typing import List, Dict, Any, Optional, AsyncIterator
 import anthropic
-from anthropic.types import MessageParam, ContentBlock
-from anthropic._types import NOT_GIVEN, NotGiven
+from anthropic.types import MessageParam
 
 from .base import BaseLLMProvider
-from models.external.llm.request import LLMRequest, Message
-from models.external.llm.response import LLMResponse, LLMStreamResponse
-from core.config.services.llm.anthropic import AnthropicConfig
-from core.logging import get_logger
+from models.external.llm.request import LLMRequest
+from models.external.llm.request import LLMMessage as RequestLLMMessage
+from models.external.llm.response import LLMResponse, LLMChoice, LLMUsage
+from models.external.llm.response import LLMMessage as ResponseLLMMessage
+from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
 
@@ -20,20 +20,28 @@ logger = get_logger(__name__)
 class AnthropicProvider(BaseLLMProvider):
   """Anthropic Claude LLM Provider"""
 
-  def __init__(self, config: AnthropicConfig):
-    self.config = config
-    self.client = anthropic.AsyncAnthropic(
-        api_key=config.api_key,
-        timeout=config.timeout
-    )
+  def __init__(self, config: Dict[str, Any]):
+    super().__init__(config)
+    self.logger = logger
     self.provider_name = "anthropic"
-    logger.info(f"Initialized Anthropic provider with model: {config.model}")
 
-  async def generate_response(
-      self,
-      request: LLMRequest,
-      **kwargs
-  ) -> LLMResponse:
+    # Initialize Anthropic client
+    api_key = config.get("api_key")
+    if not api_key:
+      raise ValueError("Anthropic API key is required")
+
+    self.client = anthropic.AsyncAnthropic(
+        api_key=api_key,
+        timeout=config.get("timeout", 30.0)
+    )
+
+    self.model = config.get("model", "claude-3-5-sonnet-20241022")
+    self.temperature = config.get("temperature", 0.7)
+    self.max_tokens = config.get("max_tokens", 1024)
+
+    logger.info(f"Initialized Anthropic provider with model: {self.model}")
+
+  async def generate_response(self, request: LLMRequest) -> LLMResponse:
     """Generate a response using Anthropic Claude"""
     try:
       # Convert messages to Anthropic format
@@ -41,18 +49,19 @@ class AnthropicProvider(BaseLLMProvider):
 
       # Prepare request parameters
       params = {
-          "model": self.config.model,
+          "model": request.model or self.model,
           "messages": messages,
-          "max_tokens": request.max_tokens or self.config.max_tokens,
-          "temperature": request.temperature or self.config.temperature,
+          "max_tokens": request.max_tokens or self.max_tokens,
+          "temperature": request.temperature if request.temperature is not None else self.temperature,
       }
 
-      # Add optional parameters
-      if request.system_prompt:
-        params["system"] = request.system_prompt
+      # Add system prompt if provided in extra_params
+      if "system_prompt" in request.extra_params:
+        params["system"] = request.extra_params["system_prompt"]
 
-      if request.top_p is not None:
-        params["top_p"] = request.top_p
+      # Add optional parameters from extra_params
+      if "top_p" in request.extra_params:
+        params["top_p"] = request.extra_params["top_p"]
 
       if request.stop_sequences:
         # Max 4 for Anthropic
@@ -70,27 +79,30 @@ class AnthropicProvider(BaseLLMProvider):
           if hasattr(block, 'text'):
             content += block.text
 
-      # Calculate tokens (approximate for Anthropic)
-      prompt_tokens = self._estimate_tokens(
-          " ".join([msg.content for msg in request.messages]))
-      completion_tokens = self._estimate_tokens(content)
+      # Create choices in the expected format
+      choice = LLMChoice(
+          message=ResponseLLMMessage(role="assistant", content=content),
+          finish_reason=response.stop_reason or "stop",
+          index=0
+      )
+
+      # Create usage information
+      usage = None
+      if hasattr(response, 'usage') and response.usage:
+        usage = LLMUsage(
+            prompt_tokens=getattr(response.usage, 'input_tokens', 0),
+            completion_tokens=getattr(response.usage, 'output_tokens', 0),
+            total_tokens=getattr(response.usage, 'input_tokens', 0) +
+            getattr(response.usage, 'output_tokens', 0)
+        )
 
       return LLMResponse(
-          content=content,
+          id=getattr(response, 'id', 'anthropic-response'),
           provider=self.provider_name,
-          model=self.config.model,
-          prompt_tokens=prompt_tokens,
-          completion_tokens=completion_tokens,
-          total_tokens=prompt_tokens + completion_tokens,
-          finish_reason=response.stop_reason or "stop",
-          metadata={
-              "usage": {
-                  "input_tokens": getattr(response.usage, 'input_tokens', prompt_tokens),
-                  "output_tokens": getattr(response.usage, 'output_tokens', completion_tokens)
-              },
-              "model": response.model,
-              "stop_reason": response.stop_reason
-          }
+          model=response.model,
+          choices=[choice],
+          usage=usage,
+          raw_response=response.model_dump() if hasattr(response, 'model_dump') else None
       )
 
     except anthropic.APIError as e:
@@ -98,13 +110,9 @@ class AnthropicProvider(BaseLLMProvider):
       raise Exception(f"Anthropic API error: {str(e)}")
     except Exception as e:
       logger.error(f"Unexpected error in Anthropic provider: {str(e)}")
-      raise
+      raise Exception(f"Anthropic error: {str(e)}")
 
-  async def stream_response(
-      self,
-      request: LLMRequest,
-      **kwargs
-  ) -> AsyncGenerator[LLMStreamResponse, None]:
+  async def stream_response(self, request: LLMRequest) -> AsyncIterator[str]:
     """Stream response from Anthropic Claude"""
     try:
       # Convert messages to Anthropic format
@@ -112,79 +120,67 @@ class AnthropicProvider(BaseLLMProvider):
 
       # Prepare request parameters
       params = {
-          "model": self.config.model,
+          "model": request.model or self.model,
           "messages": messages,
-          "max_tokens": request.max_tokens or self.config.max_tokens,
-          "temperature": request.temperature or self.config.temperature,
+          "max_tokens": request.max_tokens or self.max_tokens,
+          "temperature": request.temperature if request.temperature is not None else self.temperature,
           "stream": True,
       }
 
-      # Add optional parameters
-      if request.system_prompt:
-        params["system"] = request.system_prompt
+      # Add system prompt if provided in extra_params
+      if "system_prompt" in request.extra_params:
+        params["system"] = request.extra_params["system_prompt"]
 
-      if request.top_p is not None:
-        params["top_p"] = request.top_p
+      # Add optional parameters from extra_params
+      if "top_p" in request.extra_params:
+        params["top_p"] = request.extra_params["top_p"]
 
       if request.stop_sequences:
         params["stop_sequences"] = request.stop_sequences[:4]
 
       logger.debug(f"Starting stream from Anthropic: {params['model']}")
 
-      # Stream the response
-      async with self.client.messages.stream(**params) as stream:
-        async for event in stream:
-          if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
-            yield LLMStreamResponse(
-                content=event.delta.text,
-                provider=self.provider_name,
-                model=self.config.model,
-                is_complete=False,
-                metadata={
-                    "event_type": event.type if hasattr(event, 'type') else "content_block_delta"
-                }
-            )
+      # Use streaming with proper event handling
+      stream = await self.client.messages.create(**params)
 
-        # Send completion signal
-        yield LLMStreamResponse(
-            content="",
-            provider=self.provider_name,
-            model=self.config.model,
-            is_complete=True,
-            metadata={
-                "event_type": "message_stop",
-                "usage": {
-                    "input_tokens": getattr(stream.get_final_message().usage, 'input_tokens', 0),
-                    "output_tokens": getattr(stream.get_final_message().usage, 'output_tokens', 0)
-                }
-            }
-        )
+      async for event in stream:
+        # Handle different types of streaming events
+        if event.type == "content_block_delta":
+          if hasattr(event.delta, 'text'):
+            yield event.delta.text
+        elif event.type == "content_block_start":
+          # Start of content block, might contain initial text
+          if hasattr(event.content_block, 'text'):
+            yield event.content_block.text
 
     except anthropic.APIError as e:
       logger.error(f"Anthropic streaming error: {str(e)}")
-      yield LLMStreamResponse(
-          content="",
-          provider=self.provider_name,
-          model=self.config.model,
-          is_complete=True,
-          error=str(e)
-      )
+      raise Exception(f"Anthropic streaming error: {str(e)}")
     except Exception as e:
       logger.error(f"Unexpected streaming error: {str(e)}")
-      yield LLMStreamResponse(
-          content="",
-          provider=self.provider_name,
-          model=self.config.model,
-          is_complete=True,
-          error=str(e)
-      )
+      raise Exception(f"Anthropic streaming error: {str(e)}")
 
-  def _convert_messages(self, messages: List[Message]) -> List[MessageParam]:
+  async def validate_config(self) -> bool:
+    """Validate Anthropic provider configuration"""
+    try:
+      # Test with a minimal request
+      response = await self.client.messages.create(
+          model=self.model,
+          messages=[{"role": "user", "content": "test"}],
+          max_tokens=1
+      )
+      logger.info("Anthropic configuration validation successful")
+      return True
+    except Exception as e:
+      logger.error(f"Anthropic configuration validation failed: {str(e)}")
+      return False
+
+  def _convert_messages(self, messages: List[RequestLLMMessage]) -> List[MessageParam]:
     """Convert internal message format to Anthropic format"""
     anthropic_messages = []
 
     for msg in messages:
-      # Map roles
+      # Map roles - skip system messages as they're handled separately
       if msg.role == "assistant":
         role = "assistant"
       elif msg.role == "user":
@@ -202,34 +198,21 @@ class AnthropicProvider(BaseLLMProvider):
 
     return anthropic_messages
 
-  def _estimate_tokens(self, text: str) -> int:
-    """Estimate token count for Anthropic (rough approximation)"""
-    # Anthropic uses a different tokenizer, this is a rough estimate
-    # In production, you might want to use the actual tokenizer
-    return max(1, len(text.split()) * 1.3)
-
-  async def get_available_models(self) -> List[str]:
+  def get_available_models(self) -> List[str]:
     """Get list of available Anthropic models"""
     return [
+        # Claude 3.5 Models (Latest)
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-sonnet-20240620",
+        "claude-3-5-haiku-20241022",
+
+        # Claude 3 Models
         "claude-3-opus-20240229",
         "claude-3-sonnet-20240229",
         "claude-3-haiku-20240307",
+
+        # Legacy Claude Models
         "claude-2.1",
         "claude-2.0",
         "claude-instant-1.2"
     ]
-
-  async def validate_configuration(self) -> bool:
-    """Validate Anthropic provider configuration"""
-    try:
-      # Test with a minimal request
-      response = await self.client.messages.create(
-          model=self.config.model,
-          messages=[{"role": "user", "content": "test"}],
-          max_tokens=1
-      )
-      logger.info("Anthropic configuration validation successful")
-      return True
-    except Exception as e:
-      logger.error(f"Anthropic configuration validation failed: {str(e)}")
-      return False

@@ -3,7 +3,7 @@ Transcript database model.
 """
 from sqlalchemy import Column, String, Text, DateTime, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
-from ..base import BaseModel
+from data.db.base import BaseModel
 
 
 class Transcript(BaseModel):

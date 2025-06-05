@@ -2,7 +2,7 @@
 User profile database model.
 """
 from sqlalchemy import Column, String, Text, DateTime, JSON, Boolean
-from ..base import BaseModel
+from data.db.base import BaseModel
 
 
 class UserProfile(BaseModel):

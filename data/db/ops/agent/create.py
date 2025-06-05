@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional
 
-from ...models.agentconfig import AgentConfig
-from ....core.logging import get_logger
+from data.db.models.agentconfig import AgentConfig
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 

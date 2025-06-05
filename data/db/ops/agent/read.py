@@ -6,8 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional, List
 
-from ...models.agentconfig import AgentConfig
-from ....core.logging import get_logger
+from data.db.models.agentconfig import AgentConfig
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -53,7 +53,7 @@ async def get_active_agents(session: AsyncSession) -> List[AgentConfig]:
         .where(AgentConfig.is_active == True)
         .order_by(AgentConfig.name)
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
   except SQLAlchemyError as e:
     logger.error(f"Failed to get active agents: {e}")
@@ -74,7 +74,7 @@ async def get_all_agents(session: AsyncSession) -> List[AgentConfig]:
     result = await session.execute(
         select(AgentConfig).order_by(AgentConfig.name)
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
   except SQLAlchemyError as e:
     logger.error(f"Failed to get all agents: {e}")

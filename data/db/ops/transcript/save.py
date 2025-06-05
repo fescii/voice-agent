@@ -6,8 +6,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional
 from datetime import datetime
 
-from ...models.transcript import Transcript
-from ....core.logging import get_logger
+from data.db.models.transcript import Transcript
+from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
 

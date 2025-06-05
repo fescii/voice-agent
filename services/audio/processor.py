@@ -6,7 +6,7 @@ import asyncio
 from typing import Optional, Dict, Any, Tuple
 import io
 import wave
-import audioop
+import struct
 from dataclasses import dataclass
 
 from core.logging.setup import get_logger

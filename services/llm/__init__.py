@@ -1,10 +1,10 @@
 """LLM service package."""
 
-from .orchestrator import LLMOrchestrator
-from .providers import base, openai, gemini, anthropic
-from . import prompting
-from . import contextualization
-from . import streaming
+from services.llm.orchestrator import LLMOrchestrator
+from services.llm.providers import base, openai, gemini, anthropic
+from services.llm import prompting
+from services.llm import contextualization
+from services.llm import streaming
 
 __all__ = [
     "LLMOrchestrator",

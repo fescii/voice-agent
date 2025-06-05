@@ -196,7 +196,7 @@ class TranscriptionProcessor:
         data["language"] = language
 
       response = await self._http_client.post(
-          "https://api.openai.com/v1/audio/transcriptions",
+          f"{self.whisper_config.base_url}/audio/transcriptions",
           headers={
               "Authorization": f"Bearer {self.whisper_config.api_key}"
           },

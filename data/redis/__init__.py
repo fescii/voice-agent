@@ -1,6 +1,6 @@
 """Redis data access package."""
 
-from . import connection
-from . import ops
+from data.redis import connection
+from data.redis import ops
 
 __all__ = ["connection", "ops"]

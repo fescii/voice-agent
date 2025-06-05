@@ -3,8 +3,8 @@ Retrieve call session state from Redis.
 """
 import json
 from typing import Dict, Any, Optional
-from ...connection import get_redis_client
-from ....core.logging import get_logger
+from data.redis.connection import get_redis_client
+from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
 

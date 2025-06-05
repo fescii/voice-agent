@@ -1,7 +1,7 @@
 """Database operations package."""
 
-from . import call
-from . import agent
-from . import transcript
+from data.db.ops import call
+from data.db.ops import agent
+from data.db.ops import transcript
 
 __all__ = ["call", "agent", "transcript"]

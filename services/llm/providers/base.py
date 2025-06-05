@@ -3,8 +3,8 @@ Base LLM provider interface.
 """
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, AsyncIterator
-from ....models.external.llm.request import LLMRequest
-from ....models.external.llm.response import LLMResponse
+from models.external.llm.request import LLMRequest
+from models.external.llm.response import LLMResponse
 
 
 class BaseLLMProvider(ABC):

@@ -3,8 +3,8 @@ Redis connection setup and client management.
 """
 import redis.asyncio as redis
 from typing import Optional
-from ..core.config.providers.redis import RedisConfig
-from ..core.logging import get_logger
+from core.config.providers.redis import RedisConfig
+from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
 
@@ -24,6 +24,9 @@ async def get_redis_client() -> redis.Redis:
   if _redis_client is None:
     await connect_redis()
 
+  if _redis_client is None:
+    raise RuntimeError("Failed to establish Redis connection")
+
   return _redis_client
 
 
@@ -38,7 +41,7 @@ async def connect_redis() -> None:
         host=config.host,
         port=config.port,
         password=config.password,
-        db=config.database,
+        db=config.db,
         decode_responses=True,
         health_check_interval=30,
         socket_keepalive=True,

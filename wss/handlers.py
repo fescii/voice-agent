@@ -8,13 +8,15 @@ import json
 from typing import Dict, Any, Optional, Callable
 from datetime import datetime
 
-from .connection import WebSocketConnection, ConnectionState
-from services.audio.streaming import AudioStreamService
-from services.agent.core import AgentService
+from wss.connection import WebSocketConnection, ConnectionState
+from services.audio.streaming import StreamingProcessor, StreamingConfig, AudioStreamService
+from services.agent.core import AgentCore, AgentService
 from services.call.management.supervisor import CallSupervisor
-from services.stt.whisper_service import WhisperSTTService
-from services.tts.elevenlabs_service import ElevenLabsTTSService
-from core.logging import get_logger
+from services.stt.whisper import WhisperService
+from services.tts.elevenlabs import ElevenLabsService
+from core.config.services.stt.whisper import WhisperConfig
+from core.config.services.tts.elevenlabs import ElevenLabsConfig
+from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
 
@@ -23,10 +25,11 @@ class WebSocketHandlers:
   """Handles WebSocket events and message routing"""
 
   def __init__(self):
+    # Initialize services with default configs
     self.audio_stream_service = AudioStreamService()
     self.call_supervisor = CallSupervisor()
-    self.stt_service = WhisperSTTService()
-    self.tts_service = ElevenLabsTTSService()
+    self.stt_service = WhisperService(WhisperConfig())
+    self.tts_service = ElevenLabsService(ElevenLabsConfig())
 
     # Message handlers mapping
     self.message_handlers: Dict[str, Callable] = {
@@ -438,7 +441,8 @@ class WebSocketHandlers:
     """Handle incoming audio data"""
     try:
       # Process audio through STT service
-      text = await self.stt_service.transcribe_audio(audio_data)
+      result = await self.stt_service.transcribe_audio(audio_data)
+      text = result.get("text", "") if isinstance(result, dict) else ""
       if text and text.strip():
         logger.debug(f"Transcribed audio: {text[:50]}...")
         # Further processing would happen here

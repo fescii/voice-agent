@@ -7,8 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import Dict, Any
 from datetime import datetime
 
-from ...models.agentconfig import AgentConfig
-from ....core.logging import get_logger
+from data.db.models.agentconfig import AgentConfig
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -79,7 +79,9 @@ async def update_agent_call_count(
       logger.warning(f"No agent found with ID {agent_id}")
       return False
 
-    new_count = max(0, agent.current_call_count + increment)
+    # Type ignore needed due to SQLAlchemy typing limitations
+    current_count = int(agent.current_call_count or 0)  # type: ignore
+    new_count = max(0, current_count + increment)
 
     result = await session.execute(
         update(AgentConfig)

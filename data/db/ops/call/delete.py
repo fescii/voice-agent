@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from sqlalchemy.exc import SQLAlchemyError
 
-from ...models.calllog import CallLog
-from ....core.logging import get_logger
+from data.db.models.calllog import CallLog
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 

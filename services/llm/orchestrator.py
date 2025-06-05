@@ -4,13 +4,13 @@ LLM orchestrator for managing multiple providers.
 from typing import Dict, Any, Optional, List, AsyncIterator
 from enum import Enum
 
-from .providers.base import BaseLLMProvider
-from .providers.openai import OpenAIProvider
-from .providers.gemini import GeminiProvider
-from .providers.anthropic import AnthropicProvider
-from ..models.external.llm.request import LLMRequest, LLMMessage
-from ..models.external.llm.response import LLMResponse
-from ..core.logging import get_logger
+from services.llm.providers.base import BaseLLMProvider
+from services.llm.providers.openai import OpenAIProvider
+from services.llm.providers.gemini import GeminiProvider
+from services.llm.providers.anthropic import AnthropicProvider
+from models.external.llm.request import LLMRequest, LLMMessage
+from models.external.llm.response import LLMResponse
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -32,20 +32,45 @@ class LLMOrchestrator:
 
   def _initialize_providers(self):
     """Initialize all available LLM providers."""
+    # Initialize OpenAI
     try:
-      # Initialize OpenAI
-      self._providers[LLMProviderType.OPENAI.value] = OpenAIProvider()
-
-      # Initialize Gemini
-      # self._providers[LLMProviderType.GEMINI.value] = GeminiProvider()
-
-      # Initialize Anthropic
-      # self._providers[LLMProviderType.ANTHROPIC.value] = AnthropicProvider()
-
-      self.logger.info(f"Initialized {len(self._providers)} LLM providers")
-
+      # Default config for testing - in production, this should come from settings
+      openai_config = {
+          "api_key": "your-openai-api-key",  # This should be from env/config
+          "model": "gpt-3.5-turbo",
+          "temperature": 0.7,
+          "max_tokens": 1024
+      }
+      self._providers[LLMProviderType.OPENAI.value] = OpenAIProvider(
+          openai_config)
+      self.logger.info("Initialized OpenAI provider")
     except Exception as e:
-      self.logger.error(f"Failed to initialize LLM providers: {e}")
+      self.logger.warning(f"Failed to initialize OpenAI provider: {e}")
+
+    # Initialize Gemini
+    try:
+      self._providers[LLMProviderType.GEMINI.value] = GeminiProvider()
+      self.logger.info("Initialized Gemini provider")
+    except Exception as e:
+      self.logger.warning(f"Failed to initialize Gemini provider: {e}")
+
+    # Initialize Anthropic
+    try:
+      # Default config for testing - in production, this should come from settings
+      anthropic_config = {
+          "api_key": "your-anthropic-api-key",  # This should be from env/config
+          "model": "claude-3-sonnet-20240229",
+          "temperature": 0.7,
+          "max_tokens": 1024
+      }
+      self._providers[LLMProviderType.ANTHROPIC.value] = AnthropicProvider(
+          anthropic_config)
+      self.logger.info("Initialized Anthropic provider")
+    except Exception as e:
+      self.logger.warning(f"Failed to initialize Anthropic provider: {e}")
+
+    self.logger.info(
+        f"Successfully initialized {len(self._providers)} LLM providers")
 
   async def generate_response(
       self,
@@ -147,7 +172,7 @@ class LLMOrchestrator:
 
       # Get provider and stream response
       llm_provider = self._providers[provider]
-      async for token in llm_provider.stream_response(request):
+      async for token in await llm_provider.stream_response(request):
         yield token
 
     except Exception as e:

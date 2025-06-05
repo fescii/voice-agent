@@ -6,10 +6,8 @@ from typing import Dict, Optional
 import asyncio
 import json
 
-from wss.connection.manager import ConnectionManager
-from wss.connection.auth import authenticate_websocket
-from wss.handlers.audio.receive import AudioReceiveHandler
-from wss.handlers.audio.send import AudioSendHandler
+from wss.connection import ConnectionManager, WebSocketConnection
+from wss.handlers import WebSocketHandlers
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)

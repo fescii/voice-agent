@@ -6,8 +6,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional
 from datetime import datetime
 
-from ...models.calllog import CallLog, CallStatus, CallDirection
-from ....core.logging import get_logger
+from data.db.models.calllog import CallLog, CallStatus, CallDirection
+from core.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -18,6 +18,7 @@ class DatabaseConfig(BaseModel):
   # Connection pool settings
   pool_size: int = 10
   max_overflow: int = 20
+  echo_sql: bool = False
 
   class Config:
     env_file = ".env"
@@ -33,6 +34,16 @@ class DatabaseConfig(BaseModel):
     self.database = os.getenv("DB_DATABASE", self.database)
 
   @property
-  def url(self) -> str:
-    """Get database URL"""
+  def async_database_url(self) -> str:
+    """Get async database URL"""
     return f"postgresql+asyncpg://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
+
+  @property
+  def sync_database_url(self) -> str:
+    """Get sync database URL"""
+    return f"postgresql://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
+
+  @property
+  def url(self) -> str:
+    """Get database URL (alias for async_database_url)"""
+    return self.async_database_url

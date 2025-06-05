@@ -1,6 +1,6 @@
 """Call state management services."""
 
-from .manager import CallStateManager
-from .tracker import CallStateTracker
+from services.call.manager import CallStateManager
+from services.call.tracker import CallStateTracker
 
 __all__ = ["CallStateManager", "CallStateTracker"]

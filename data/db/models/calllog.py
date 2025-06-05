@@ -2,7 +2,8 @@
 Call log database model.
 """
 from sqlalchemy import Column, String, Text, DateTime, Enum, Float, Boolean, JSON
-from ..base import BaseModel
+from sqlalchemy.orm import relationship
+from data.db.base import BaseModel
 import enum
 
 
@@ -60,8 +61,11 @@ class CallLog(BaseModel):
   stt_provider = Column(String(100))
 
   # Additional metadata
-  metadata = Column(JSON)
+  extra_data = Column(JSON)
   error_message = Column(Text)
+
+  # Relationships
+  transcripts = relationship("Transcript", back_populates="call_log")
 
   def __repr__(self):
     return f"<CallLog(call_id='{self.call_id}', status='{self.status}', direction='{self.direction}')>"
