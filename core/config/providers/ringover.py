@@ -2,10 +2,10 @@
 Ringover API configuration settings
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class RingoverConfig(BaseSettings):
+class RingoverConfig(BaseModel):
   """Ringover API configuration"""
 
   # API settings

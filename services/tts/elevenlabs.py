@@ -20,7 +20,7 @@ class ElevenLabsService:
     """Initialize ElevenLabs service."""
     self.config = config
     self.client = httpx.AsyncClient(
-        base_url="https://api.elevenlabs.io/v1",
+        base_url=config.base_url,
         headers={
             "xi-api-key": config.api_key,
             "Content-Type": "application/json"

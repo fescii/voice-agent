@@ -2,10 +2,10 @@
 Database configuration settings
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class DatabaseConfig(BaseSettings):
+class DatabaseConfig(BaseModel):
   """PostgreSQL database configuration"""
 
   # Database connection

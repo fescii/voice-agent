@@ -2,10 +2,10 @@
 Email notification configuration settings
 """
 import os
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 
-class EmailConfig(BaseSettings):
+class EmailConfig(BaseModel):
   """Email notification configuration"""
 
   # SMTP settings

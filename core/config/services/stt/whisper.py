@@ -2,10 +2,10 @@
 OpenAI Whisper STT API configuration settings
 """
 import os
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 
-class WhisperConfig(BaseSettings):
+class WhisperConfig(BaseModel):
   """OpenAI Whisper STT API configuration"""
 
   # API settings

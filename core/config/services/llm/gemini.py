@@ -2,10 +2,10 @@
 Google Gemini API configuration settings
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class GeminiConfig(BaseSettings):
+class GeminiConfig(BaseModel):
   """Google Gemini API configuration"""
 
   # API settings

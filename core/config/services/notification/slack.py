@@ -2,10 +2,10 @@
 Slack notification configuration settings
 """
 import os
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 
-class SlackConfig(BaseSettings):
+class SlackConfig(BaseModel):
   """Slack notification configuration"""
 
   # API settings

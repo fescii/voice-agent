@@ -2,10 +2,10 @@
 ElevenLabs TTS API configuration settings
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class ElevenLabsConfig(BaseSettings):
+class ElevenLabsConfig(BaseModel):
   """ElevenLabs TTS API configuration"""
 
   # API settings

@@ -2,10 +2,10 @@
 WebSocket configuration settings
 """
 import os
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 
-class WebSocketConfig(BaseSettings):
+class WebSocketConfig(BaseModel):
   """WebSocket server configuration"""
 
   # Connection settings

@@ -2,10 +2,10 @@
 Anthropic Claude API configuration settings
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class AnthropicConfig(BaseSettings):
+class AnthropicConfig(BaseModel):
   """Anthropic Claude API configuration"""
 
   # API settings

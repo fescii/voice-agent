@@ -2,10 +2,10 @@
 Main application configuration
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class AppConfig(BaseSettings):
+class AppConfig(BaseModel):
   """Application configuration settings"""
 
   app_name: str = "AI Voice Agent System"

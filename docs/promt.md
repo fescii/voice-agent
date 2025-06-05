@@ -416,7 +416,7 @@ This section is written as if instructing an AI or a developer on building the s
 
 1. **Strictly Adhere to File Structure and Naming:** Implement all code within the exact folder and file paths specified. Create new files and subfolders if a piece of logic doesn't fit neatly or makes an existing file too long, always following the "short files, deep nesting, lowercase names" principle.  
 2. **Configuration Management (core/config/):**  
-   * Implement all configurations (API keys, database URLs, model names, Ringover settings) using environment variables, loaded via Pydantic BaseSettings in the specific files within core/config/providers/ and core/config/services/.  
+   * Implement all configurations (API keys, database URLs, model names, Ringover settings) using environment variables, loaded via Pydantic BaseModel in the specific files within core/config/providers/ and core/config/services/.  
    * Ensure sensitive keys (Ringover, LLMs) are never hardcoded.  
    * Provide clear instructions on which environment variables need to be set for each configuration file.  
 3. **Outbound Call Initiation (api/v1/calls/actions/initiate.py, services/call/initiation/outbound.py):**  

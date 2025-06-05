@@ -2,10 +2,10 @@
 OpenAI API configuration settings
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class OpenAIConfig(BaseSettings):
+class OpenAIConfig(BaseModel):
   """OpenAI API configuration"""
 
   # API settings

@@ -9,6 +9,8 @@ import re
 import httpx
 
 from core.logging.setup import get_logger
+from core.config.services.notification.email import EmailConfig
+from core.config.services.notification.slack import SlackConfig
 from .manager import Notification, NotificationChannel
 
 logger = get_logger(__name__)
@@ -17,15 +19,17 @@ logger = get_logger(__name__)
 class EmailChannel(NotificationChannel):
   """Email notification channel."""
 
-  def __init__(self, smtp_config: Dict[str, Any]):
+  def __init__(self, email_config: EmailConfig):
     """Initialize email channel."""
-    self.smtp_config = smtp_config
-    self.smtp_host = smtp_config.get("host", "localhost")
-    self.smtp_port = smtp_config.get("port", 587)
-    self.smtp_username = smtp_config.get("username")
-    self.smtp_password = smtp_config.get("password")
-    self.use_tls = smtp_config.get("use_tls", True)
-    self.from_email = smtp_config.get("from_email", "noreply@example.com")
+    self.email_config = email_config
+    self.smtp_host = email_config.smtp_host
+    self.smtp_port = email_config.smtp_port
+    self.smtp_username = email_config.smtp_user
+    self.smtp_password = email_config.smtp_password
+    self.use_tls = email_config.smtp_use_tls
+    self.use_ssl = email_config.smtp_use_ssl
+    self.from_email = email_config.from_email
+    self.from_name = email_config.from_name
 
   async def send(self, notification: Notification) -> bool:
     """Send email notification."""
@@ -121,12 +125,13 @@ class WebhookChannel(NotificationChannel):
 class SlackChannel(NotificationChannel):
   """Slack notification channel."""
 
-  def __init__(self, slack_config: Dict[str, Any]):
+  def __init__(self, slack_config: SlackConfig):
     """Initialize Slack channel."""
     self.slack_config = slack_config
-    self.bot_token = slack_config.get("bot_token")
-    self.webhook_url = slack_config.get("webhook_url")
-    self.timeout = slack_config.get("timeout", 30)
+    self.bot_token = slack_config.bot_token
+    self.webhook_url = slack_config.webhook_url
+    self.api_base_url = slack_config.api_base_url
+    self.timeout = 30
 
   async def send(self, notification: Notification) -> bool:
     """Send Slack notification."""
@@ -236,7 +241,7 @@ class SlackChannel(NotificationChannel):
 
       async with httpx.AsyncClient(timeout=self.timeout) as client:
         response = await client.post(
-            "https://slack.com/api/chat.postMessage",
+            f"{self.api_base_url}/chat.postMessage",
             json=payload,
             headers=headers
         )

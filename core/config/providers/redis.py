@@ -2,10 +2,10 @@
 Redis configuration settings
 """
 import os
-from pydantic import BaseSettings
+from pydantic import BaseModel
 
 
-class RedisConfig(BaseSettings):
+class RedisConfig(BaseModel):
   """Redis cache configuration"""
 
   # Redis connection
