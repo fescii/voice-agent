@@ -9,7 +9,8 @@ import json
 from services.call.management.orchestrator import CallOrchestrator
 from services.ringover.stream import RingoverWebSocketStreamer, AudioFrame
 from core.config import SystemConfiguration, ConfigurationManager
-from core.config.providers.telephony import RingoverConfig, TelephonyProvider
+from core.config.providers.telephony import TelephonyProvider
+from core.config.providers.telephony import RingoverConfig as TelephonyRingoverConfig
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -67,15 +68,15 @@ async def audio_streaming_websocket(
     orchestrator = get_orchestrator()
 
     # Get Ringover config from system config
-    from core.config.providers.telephony import RingoverConfig, TelephonyProvider
-
-    if isinstance(orchestrator.system_config.telephony_config, RingoverConfig):
+    if isinstance(orchestrator.system_config.telephony_config, TelephonyRingoverConfig):
       ringover_config = orchestrator.system_config.telephony_config
     else:
       # Create a default RingoverConfig if needed
+      from core.config.providers.telephony import RingoverConfig
+      # The config will load values from environment variables via the config system
       ringover_config = RingoverConfig(
           provider=TelephonyProvider.RINGOVER,
-          api_key="dummy_key"  # Should be from environment
+          api_key=""  # Will be loaded from environment via config system
       )
 
     ringover_streamer = RingoverWebSocketStreamer(ringover_config)
@@ -89,9 +90,13 @@ async def audio_streaming_websocket(
     _active_streamers[session_id] = ringover_streamer
 
     # Connect to Ringover audio stream
+    # Get auth token from standalone config for streaming
+    from core.config.providers.ringover import RingoverConfig as StandaloneRingoverConfig
+    standalone_config = StandaloneRingoverConfig()
+
     success = await ringover_streamer.connect(
         call_id=session.call_info.call_id,
-        auth_token="dummy_token"  # Should be from configuration
+        auth_token=standalone_config.streamer_auth_token or "dummy_token"
     )
     if not success:
       await websocket.send_text(json.dumps({

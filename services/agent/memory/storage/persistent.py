@@ -1,13 +1,20 @@
 """
 Persistent storage operations for agent memory.
+
+This implementation uses PostgreSQL database for persistent storage.
 """
 import json
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
+from contextlib import asynccontextmanager
+
 from core.logging.setup import get_logger
-from data.redis.ops.session.store import store_call_session
-from data.redis.ops.session.retrieve import get_call_session
-from data.redis.ops.session.delete import delete_session_data
+from data.db.connection import get_db_session
+from data.db.ops.memory import (
+    save_agent_memory,
+    get_agent_memory,
+    delete_agent_memory
+)
 from ..models.item import MemoryItem, ConversationMemory
 
 logger = get_logger(__name__)
@@ -21,21 +28,20 @@ class MemoryStorage:
     self.agent_id = agent_id
 
   async def load_conversation_memory(self, conversation_id: str) -> Optional[ConversationMemory]:
-    """Load conversation memory from persistence."""
+    """Load conversation memory from PostgreSQL database."""
     try:
-      memory_key = f"agent_memory:{self.agent_id}:{conversation_id}"
-      memory_data = await get_call_session(memory_key)
+      async with get_db_session() as session:
+        memory_data = await get_agent_memory(session, self.agent_id, conversation_id)
 
-      if memory_data:
-        # Memory data is already a dictionary from get_call_session
-        memory_dict = memory_data
+        if not memory_data:
+          return None
 
         # Reconstruct memory objects
         memory = ConversationMemory(conversation_id=conversation_id)
 
         # Reconstruct short-term memory
-        if "short_term" in memory_dict:
-          for key, item_data in memory_dict["short_term"].items():
+        if "short_term" in memory_data:
+          for key, item_data in memory_data["short_term"].items():
             memory.short_term[key] = MemoryItem(
                 key=key,
                 value=item_data["value"],
@@ -47,8 +53,8 @@ class MemoryStorage:
             )
 
         # Reconstruct long-term memory
-        if "long_term" in memory_dict:
-          for key, item_data in memory_dict["long_term"].items():
+        if "long_term" in memory_data:
+          for key, item_data in memory_data["long_term"].items():
             memory.long_term[key] = MemoryItem(
                 key=key,
                 value=item_data["value"],
@@ -60,37 +66,29 @@ class MemoryStorage:
             )
 
         # Reconstruct working memory
-        memory.working_memory = memory_dict.get("working_memory", {})
+        memory.working_memory = memory_data.get("working_memory", {})
 
-        if "last_accessed" in memory_dict:
+        if "last_accessed" in memory_data:
           memory.last_accessed = datetime.fromisoformat(
-              memory_dict["last_accessed"])
+              memory_data["last_accessed"])
 
         return memory
 
-      return None
-
     except Exception as e:
-      logger.warning(f"Error loading conversation memory: {str(e)}")
+      logger.warning(
+          f"Error loading conversation memory from PostgreSQL: {str(e)}")
       return None
 
   async def persist_conversation_memory(self, conversation_id: str, memory: ConversationMemory):
-    """Persist conversation memory to storage."""
+    """Persist conversation memory to PostgreSQL database."""
     try:
-      memory_key = f"agent_memory:{self.agent_id}:{conversation_id}"
-
-      # Serialize memory data
-      memory_dict = {
-          "conversation_id": conversation_id,
-          "short_term": {},
-          "long_term": {},
-          "working_memory": memory.working_memory,
-          "last_accessed": memory.last_accessed.isoformat()
-      }
+      # Prepare memory data
+      short_term_dict = {}
+      long_term_dict = {}
 
       # Serialize short-term memory
       for key, memory_item in memory.short_term.items():
-        memory_dict["short_term"][key] = {
+        short_term_dict[key] = {
             "value": memory_item.value,
             "timestamp": memory_item.timestamp.isoformat(),
             "ttl": memory_item.ttl,
@@ -101,7 +99,7 @@ class MemoryStorage:
 
       # Serialize long-term memory
       for key, memory_item in memory.long_term.items():
-        memory_dict["long_term"][key] = {
+        long_term_dict[key] = {
             "value": memory_item.value,
             "timestamp": memory_item.timestamp.isoformat(),
             "ttl": memory_item.ttl,
@@ -110,18 +108,33 @@ class MemoryStorage:
             "tags": list(memory_item.tags)
         }
 
-      memory_json = json.dumps(memory_dict, default=str)
+      # Save to PostgreSQL database
+      async with get_db_session() as session:
+        success = await save_agent_memory(
+            session,
+            self.agent_id,
+            conversation_id,
+            short_term_dict,
+            long_term_dict,
+            memory.working_memory
+        )
 
-      # Store with TTL (24 hours)
-      await store_call_session(memory_key, memory_json, 24 * 3600)
+        if not success:
+          logger.warning(
+              f"Failed to save agent memory to PostgreSQL for conversation {conversation_id}")
 
     except Exception as e:
-      logger.warning(f"Error persisting conversation memory: {str(e)}")
+      logger.warning(
+          f"Error persisting conversation memory to PostgreSQL: {str(e)}")
 
   async def delete_conversation_memory(self, conversation_id: str):
-    """Delete conversation memory from storage."""
+    """Delete conversation memory from PostgreSQL database."""
     try:
-      memory_key = f"agent_memory:{self.agent_id}:{conversation_id}"
-      await delete_session_data(memory_key)
+      async with get_db_session() as session:
+        success = await delete_agent_memory(session, self.agent_id, conversation_id)
+        if not success:
+          logger.warning(
+              f"Failed to delete agent memory from PostgreSQL for conversation {conversation_id}")
     except Exception as e:
-      logger.warning(f"Error deleting conversation memory: {str(e)}")
+      logger.warning(
+          f"Error deleting conversation memory from PostgreSQL: {str(e)}")

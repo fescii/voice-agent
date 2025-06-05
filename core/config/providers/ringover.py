@@ -12,6 +12,9 @@ class RingoverConfig(BaseModel):
   api_key: str = ""
   api_base_url: str = "https://public-api.ringover.com/v2.1"
 
+  # Default caller ID for outbound calls
+  default_caller_id: str = ""
+
   # Webhook settings
   webhook_secret: str = ""
   webhook_base_url: str = ""
@@ -27,6 +30,8 @@ class RingoverConfig(BaseModel):
     super().__init__(**kwargs)
     # Load from environment variables
     self.api_key = os.getenv("RINGOVER_API_KEY", self.api_key)
+    self.default_caller_id = os.getenv(
+        "RINGOVER_DEFAULT_CALLER_ID", self.default_caller_id)
     self.webhook_secret = os.getenv(
         "RINGOVER_WEBHOOK_SECRET", self.webhook_secret)
     self.webhook_base_url = os.getenv(

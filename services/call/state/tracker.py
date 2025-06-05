@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 
 from core.logging.setup import get_logger
-from services.call.manager import CallState, CallStateInfo
+from .manager import CallState, CallStateInfo
 
 
 class CallMetrics(BaseModel):

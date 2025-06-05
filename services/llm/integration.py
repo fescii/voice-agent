@@ -1,7 +1,7 @@
 """
 Integration of prompt-based LLM system with the voice agent.
 """
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import asyncio
 
 from core.logging.setup import get_logger
@@ -10,9 +10,11 @@ from services.llm.prompt import (
     PromptManager, PromptBuilder, ConversationContext, PromptLLMAdapter
 )
 from services.llm.orchestrator import LLMOrchestrator
-from services.ringover.streaming import RingoverStreamHandler
 from services.tts.elevenlabs import ElevenLabsService
 from models.internal.callcontext import CallContext
+
+if TYPE_CHECKING:
+  from services.ringover.streaming import RingoverStreamHandler
 
 logger = get_logger(__name__)
 
@@ -31,7 +33,7 @@ class VoiceAgentLLMIntegration:
       llm_orchestrator: LLMOrchestrator,
       prompt_manager: PromptManager,
       tts_service: Optional[ElevenLabsService] = None,
-      stream_handler: Optional[RingoverStreamHandler] = None
+      stream_handler: Optional["RingoverStreamHandler"] = None
   ):
     """
     Initialize the integration.

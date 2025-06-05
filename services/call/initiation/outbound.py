@@ -5,11 +5,13 @@ import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from models.internal.callcontext import CallContext, CallResult
+from models.internal.callcontext import CallContext, CallResult, CallStatus, CallDirection
 from models.external.ringover.apirequest import RingoverCallRequest
 from services.ringover.client import RingoverClient
 from services.call.state.updater import CallStateUpdater
-from data.db.ops.call.create import create_call_record
+from data.db.ops.call.create import create_call_log
+from data.db.models.calllog import CallDirection as DBCallDirection
+from data.db.connection import get_db_session
 from core.config.providers.ringover import RingoverConfig
 from core.logging.setup import get_logger
 
@@ -49,6 +51,7 @@ class OutboundCallService:
     try:
       # Generate unique call ID
       call_id = str(uuid.uuid4())
+      session_id = str(uuid.uuid4())
 
       logger.info(
           f"Initiating outbound call {call_id} to {phone_number} with agent {agent_id}")
@@ -63,56 +66,68 @@ class OutboundCallService:
       )
 
       # Create initial call record in database
-      await create_call_record(
-          call_id=call_id,
-          phone_number=phone_number,
-          agent_id=agent_id,
-          direction="outbound",
-          status="initiated",
-          metadata=context or {}
-      )
+      async with get_db_session() as session:
+        await create_call_log(
+            session=session,
+            call_id=call_id,
+            agent_id=agent_id,
+            caller_number=caller_id or self.ringover_config.default_caller_id,
+            callee_number=phone_number,
+            direction=DBCallDirection.OUTBOUND,
+            metadata=context or {}
+        )
 
-      # Initialize call state in Redis
+      # Initialize call context
       call_context = CallContext(
           call_id=call_id,
+          session_id=session_id,
           phone_number=phone_number,
           agent_id=agent_id,
-          direction="outbound",
-          status="initiated",
+          direction=CallDirection.OUTBOUND,
+          status=CallStatus.INITIATED,
           start_time=datetime.utcnow(),
+          end_time=None,
+          duration=None,
+          ringover_call_id=None,
+          websocket_id=None,
           metadata=context or {}
       )
 
-      await self.state_updater.store_call_context(call_context)
+      # Store call context in Redis
+      await self.state_updater.create_call_session(call_context)
 
       # Initiate call through Ringover API
       ringover_response = await self.ringover_client.initiate_call(call_request)
 
-      if not ringover_response.success:
+      if "error" in ringover_response:
         logger.error(
-            f"Ringover call initiation failed: {ringover_response.error}")
-        await self.state_updater.update_call_status(call_id, "failed")
-        raise Exception(f"Call initiation failed: {ringover_response.error}")
+            f"Ringover call initiation failed: {ringover_response.get('error')}")
+        await self.state_updater.update_call_status(call_id, CallStatus.FAILED)
+        raise Exception(
+            f"Call initiation failed: {ringover_response.get('error')}")
 
-      # Update call state with Ringover call ID
-      await self.state_updater.update_call_metadata(
-          call_id,
-          {"ringover_call_id": ringover_response.ringover_call_id}
-      )
+      # Update call status with Ringover call ID if provided
+      ringover_call_id = ringover_response.get(
+          "call_id") or ringover_response.get("id")
+      if ringover_call_id:
+        # Update call context with Ringover call ID
+        call_context.ringover_call_id = ringover_call_id
+        await self.state_updater.create_call_session(call_context)
 
       logger.info(
-          f"Successfully initiated call {call_id} via Ringover (ID: {ringover_response.ringover_call_id})")
+          f"Successfully initiated call {call_id} via Ringover (ID: {ringover_call_id})")
 
       return CallResult(
           call_id=call_id,
-          status="initiated",
-          ringover_call_id=ringover_response.ringover_call_id
+          status=CallStatus.INITIATED,
+          ringover_call_id=ringover_call_id,
+          error_message=None
       )
 
     except Exception as e:
       logger.error(f"Failed to initiate outbound call: {str(e)}")
       if 'call_id' in locals():
-        await self.state_updater.update_call_status(call_id, "failed")
+        await self.state_updater.update_call_status(call_id, CallStatus.FAILED)
       raise
 
   async def schedule_call(
@@ -143,15 +158,17 @@ class OutboundCallService:
         f"Scheduling outbound call {call_id} to {phone_number} for {scheduled_time}")
 
     # Store scheduled call in database
-    await create_call_record(
-        call_id=call_id,
-        phone_number=phone_number,
-        agent_id=agent_id,
-        direction="outbound",
-        status="scheduled",
-        scheduled_time=scheduled_time,
-        metadata=context or {}
-    )
+    async with get_db_session() as session:
+      await create_call_log(
+          session=session,
+          call_id=call_id,
+          agent_id=agent_id,
+          caller_number=caller_id or self.ringover_config.default_caller_id,
+          callee_number=phone_number,
+          direction=DBCallDirection.OUTBOUND,
+          scheduled_time=scheduled_time,
+          metadata=context or {}
+      )
 
     # TODO: Add to task queue for execution at scheduled time
     logger.info(f"Call {call_id} scheduled for {scheduled_time}")

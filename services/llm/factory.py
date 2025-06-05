@@ -1,7 +1,7 @@
 """
 Factory for creating LLM prompt-based voice agent systems.
 """
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
 
 from services.llm.prompt import PromptManager
 from services.llm.prompt.templates import (
@@ -13,11 +13,13 @@ from services.llm.orchestrator import LLMOrchestrator
 from services.agent.core import AgentCore
 from services.tts.elevenlabs import ElevenLabsService
 from services.stt.whisper import WhisperService
-from services.ringover.streaming import RingoverStreamHandler
 from services.llm.prompt.builder import PromptBuilder
 from services.llm.integration import VoiceAgentLLMIntegration
 from data.db.models.agentconfig import AgentConfig
 from core.config.services.tts.elevenlabs import ElevenLabsConfig
+
+if TYPE_CHECKING:
+  from services.ringover.streaming import RingoverStreamHandler
 from core.config.services.stt.whisper import WhisperConfig
 
 
@@ -76,6 +78,9 @@ def create_integrated_voice_agent(
   # Create streaming components if enabled
   stream_handler = None
   if enable_streaming and stt_config:
+    # Import locally to avoid circular dependency
+    from services.ringover.streaming import RingoverStreamHandler
+
     stt_service = WhisperService(stt_config)
     prompt_builder = PromptBuilder(prompt_manager)
     stream_handler = RingoverStreamHandler(stt_service, prompt_builder)

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Test script to validate all LLM providers are properly implemented and configured.
-Run this to ensure all providers (Gemini, OpenAI, Anthropic) are working correctly.
+Test script to validate all service providers are properly implemented and configured.
+Run this to ensure all providers (Database, LLM, Telephony, etc.) are working correctly.
 """
 
 from models.external.llm.request import LLMRequest, LLMMessage
 from services.llm.orchestrator import LLMOrchestrator
+from core.startup.services.database import DatabaseService
+from core.config.providers.database import DatabaseConfig
 import asyncio
 import sys
 import os
@@ -111,5 +113,66 @@ async def main():
     print(f"❌ Fatal error: {str(e)}")
 
 
+async def test_postgres():
+  """Test PostgreSQL database connectivity and schema information."""
+  print("\n" + "="*50)
+  print("TESTING POSTGRESQL DATABASE")
+  print("="*50)
+
+  try:
+    # Initialize services
+    db_service = DatabaseService()
+    db_config = DatabaseConfig()
+
+    print(f"PostgreSQL Configuration:")
+    print(f"- Host: {db_config.host}")
+    print(f"- Port: {db_config.port}")
+    print(f"- Database: {db_config.database}")
+
+    # Test database connectivity
+    db_stats = await db_service.get_database_stats()
+
+    if db_stats.get("status") == "healthy":
+      print("\n✅ PostgreSQL connection successful!")
+      print(f"- Active connections: {db_stats.get('connections', 0)}")
+
+      # Check table information
+      tables_info = await db_service.check_postgres_tables()
+
+      print(f"\nDatabase Schema:")
+      print(f"- Total schemas: {tables_info.get('total_schemas', 0)}")
+      print(f"- Total tables: {tables_info.get('total_tables', 0)}")
+
+      return True
+    else:
+      print("\n❌ PostgreSQL connection failed!")
+      if "error" in db_stats:
+        print(f"- Error: {db_stats['error']}")
+      return False
+
+  except Exception as e:
+    print(f"\n❌ PostgreSQL test failed with error: {e}")
+    return False
+
+
+async def main_with_postgres():
+  """Run all provider tests including PostgreSQL."""
+  success = await main()
+  postgres_success = await test_postgres()
+
+  print("\n" + "="*50)
+  print("SUMMARY OF ALL PROVIDER TESTS")
+  print("="*50)
+  print(f"LLM Providers: {'✅ PASS' if success else '❌ FAIL'}")
+  print(f"PostgreSQL: {'✅ PASS' if postgres_success else '❌ FAIL'}")
+  print("="*50)
+
+  return success and postgres_success
+
+
 if __name__ == "__main__":
+  # Uncomment the line below to test PostgreSQL along with LLM providers
+  # asyncio.run(main_with_postgres())
+
+  # Default to just LLM testing
   asyncio.run(main())

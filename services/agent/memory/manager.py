@@ -60,14 +60,14 @@ class MemoryManager:
       if conversation_id not in self.conversations:
         await self.initialize_conversation_memory(conversation_id)
 
-      memory = self.conversations[conversation_id]
-
+      # The store_memory method handles initializing the memory if needed
+      # and doesn't return the memory object
       await self.conversation_manager.store_memory(
-          conversation_id, key, value, memory_type, importance, ttl, tags
+          conversation_id, key, value, memory_type, ttl=ttl, importance=importance, tags=tags
       )
 
-      # Update local reference
-      self.conversations[conversation_id] = memory
+      # Refresh our local reference by re-fetching the memory
+      self.conversations[conversation_id] = await self.conversation_manager.initialize_conversation_memory(conversation_id)
 
     except Exception as e:
       logger.error(f"Error storing memory: {str(e)}")

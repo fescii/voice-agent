@@ -1,7 +1,6 @@
 """
 Gemini LLM provider implementation.
 """
-import os
 import asyncio
 from typing import List, Dict, Any, AsyncIterator, Optional
 from datetime import datetime
@@ -45,10 +44,10 @@ class GeminiProvider(BaseLLMProvider):
       return
 
     # Configure Gemini
-    api_key = config.get("api_key") or os.getenv("GEMINI_API_KEY")
+    api_key = config.get("api_key")
     if not api_key:
       self.logger.error(
-          "Gemini API key not found in config or GEMINI_API_KEY environment variable")
+          "Gemini API key not found in config")
       self.client = None
       return
 

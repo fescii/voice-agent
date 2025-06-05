@@ -7,6 +7,7 @@ from .auth import AuthHandler
 from .call import CallHandler
 from .audio import AudioConfigHandler, AudioDataHandler, AudioControlHandler
 from .communication import TextMessageHandler, PingHandler, TransferHandler, DTMFHandler
+from .orchestrator import WebSocketHandlers
 
 __all__ = [
     "ConnectionManager",
@@ -19,5 +20,6 @@ __all__ = [
     "TextMessageHandler",
     "PingHandler",
     "TransferHandler",
-    "DTMFHandler"
+    "DTMFHandler",
+    "WebSocketHandlers"
 ]

@@ -10,6 +10,9 @@ from services.llm.providers.gemini import GeminiProvider
 from services.llm.providers.anthropic import AnthropicProvider
 from models.external.llm.request import LLMRequest, LLMMessage
 from models.external.llm.response import LLMResponse
+from core.config.services.llm.openai import OpenAIConfig
+from core.config.services.llm.gemini import GeminiConfig
+from core.config.services.llm.anthropic import AnthropicConfig
 from core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -34,37 +37,27 @@ class LLMOrchestrator:
     """Initialize all available LLM providers."""
     # Initialize OpenAI
     try:
-      # Default config for testing - in production, this should come from settings
-      openai_config = {
-          "api_key": "your-openai-api-key",  # This should be from env/config
-          "model": "gpt-3.5-turbo",
-          "temperature": 0.7,
-          "max_tokens": 1024
-      }
+      openai_config = OpenAIConfig()
       self._providers[LLMProviderType.OPENAI.value] = OpenAIProvider(
-          openai_config)
+          openai_config.dict())
       self.logger.info("Initialized OpenAI provider")
     except Exception as e:
       self.logger.warning(f"Failed to initialize OpenAI provider: {e}")
 
     # Initialize Gemini
     try:
-      self._providers[LLMProviderType.GEMINI.value] = GeminiProvider()
+      gemini_config = GeminiConfig()
+      self._providers[LLMProviderType.GEMINI.value] = GeminiProvider(
+          gemini_config.dict())
       self.logger.info("Initialized Gemini provider")
     except Exception as e:
       self.logger.warning(f"Failed to initialize Gemini provider: {e}")
 
     # Initialize Anthropic
     try:
-      # Default config for testing - in production, this should come from settings
-      anthropic_config = {
-          "api_key": "your-anthropic-api-key",  # This should be from env/config
-          "model": "claude-3-sonnet-20240229",
-          "temperature": 0.7,
-          "max_tokens": 1024
-      }
+      anthropic_config = AnthropicConfig()
       self._providers[LLMProviderType.ANTHROPIC.value] = AnthropicProvider(
-          anthropic_config)
+          anthropic_config.dict())
       self.logger.info("Initialized Anthropic provider")
     except Exception as e:
       self.logger.warning(f"Failed to initialize Anthropic provider: {e}")

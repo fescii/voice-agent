@@ -40,7 +40,13 @@ class CallManager:
           agent_id=agent_id,
           context=context or {}
       )
-      return result
+      return {
+          "call_id": result.call_id,
+          "status": result.status.value,
+          "ringover_call_id": result.ringover_call_id,
+          "error_message": result.error_message,
+          "metadata": result.metadata
+      }
     except Exception as e:
       self.logger.error(f"Failed to initiate call: {e}")
       return {"error": str(e)}
@@ -56,11 +62,15 @@ class CallManager:
         Call end result
     """
     try:
-      result = await self.supervisor.end_call(call_id)
-      return result
+      success = await self.supervisor.end_call(call_id)
+      return {
+          "success": success,
+          "call_id": call_id,
+          "message": "Call ended successfully" if success else "Failed to end call"
+      }
     except Exception as e:
       self.logger.error(f"Failed to end call: {e}")
-      return {"error": str(e)}
+      return {"success": False, "error": str(e)}
 
   async def get_call_status(self, call_id: str) -> Optional[Dict[str, Any]]:
     """
@@ -73,8 +83,18 @@ class CallManager:
         Call status or None if not found
     """
     try:
-      status = await self.state_manager.get_call_status(call_id)
-      return status
+      state = await self.state_manager.get_state(call_id)
+      if state is None:
+        return None
+      return {
+          "call_id": state.call_id,
+          "state": state.state.value,
+          "previous_state": state.previous_state.value if state.previous_state else None,
+          "timestamp": state.timestamp.isoformat(),
+          "agent_id": state.agent_id,
+          "user_id": state.user_id,
+          "metadata": state.metadata
+      }
     except Exception as e:
       self.logger.error(f"Failed to get call status: {e}")
       return None
@@ -91,8 +111,27 @@ class CallManager:
         Transfer result
     """
     try:
-      result = await self.supervisor.transfer_call(call_id, target_agent_id)
-      return result
+      success = await self.supervisor.transfer_call(call_id, target_agent_id)
+      return {
+          "success": success,
+          "call_id": call_id,
+          "target_agent_id": target_agent_id,
+          "message": "Call transferred successfully" if success else "Failed to transfer call"
+      }
     except Exception as e:
       self.logger.error(f"Failed to transfer call: {e}")
-      return {"error": str(e)}
+      return {"success": False, "error": str(e)}
+
+  async def get_active_call_count(self) -> int:
+    """
+    Get the count of active calls.
+
+    Returns:
+        Number of active calls
+    """
+    try:
+      active_calls = await self.state_manager.get_active_calls()
+      return len(active_calls)
+    except Exception as e:
+      self.logger.error(f"Failed to get active call count: {e}")
+      return 0
