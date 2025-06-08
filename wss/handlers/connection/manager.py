@@ -3,7 +3,7 @@ WebSocket connection lifecycle handlers.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from wss.connection import WebSocketConnection
@@ -40,7 +40,7 @@ class ConnectionManager:
       # Send welcome message
       await connection.send_message("welcome", {
           "connection_id": connection.connection_id,
-          "server_time": datetime.utcnow().isoformat(),
+          "server_time": datetime.now(timezone.utc).isoformat(),
           "supported_audio_formats": ["pcm_16000", "mulaw_8000", "opus"],
           "protocol_version": "1.0"
       })

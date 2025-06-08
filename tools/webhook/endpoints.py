@@ -3,7 +3,7 @@
 Generate webhook endpoints for Ringover dashboard configuration
 """
 
-from core.config.providers.ringover import RingoverConfig
+from core.config.registry import config_registry
 import sys
 from pathlib import Path
 
@@ -15,8 +15,8 @@ sys.path.insert(0, str(project_root))
 def get_webhook_endpoints():
   """Generate the webhook endpoints to add to Ringover dashboard"""
 
-  # Load configuration from environment (config handles .env loading)
-  config = RingoverConfig()
+  # Get configuration from centralized registry
+  config = config_registry.ringover
 
   # Get values from config
   webhook_secret = config.webhook_secret

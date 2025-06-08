@@ -2,7 +2,7 @@
 Inbound call handling service.
 """
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.ops.call import create_call_log, update_call_status
 from data.db.ops.agent import get_active_agents, update_agent_call_count
@@ -49,7 +49,7 @@ class InboundCallService:
         return None
 
       # Generate internal call ID
-      call_id = f"inbound_{ringover_call_id}_{int(datetime.utcnow().timestamp())}"
+      call_id = f"inbound_{ringover_call_id}_{int(datetime.now(timezone.utc).timestamp())}"
 
       # Create call log
       call_log = await create_call_log(

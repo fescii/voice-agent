@@ -168,24 +168,23 @@ class SystemValidator:
 
     # Try to load configurations
     try:
-      from core.config.app.main import AppConfig
-      app_config = AppConfig()
-      self.log_success("App configuration loaded")
+      from core.config.registry import config_registry
+      # Initialize registry to test all configs
+      config_registry.initialize()
+      self.log_success("Centralized configuration loaded")
     except Exception as e:
-      self.log_error(f"Failed to load app configuration: {str(e)}")
+      self.log_error(f"Failed to load centralized configuration: {str(e)}")
       return False
 
     try:
-      from core.config.providers.database import DatabaseConfig
-      db_config = DatabaseConfig()
+      db_config = config_registry.database
       self.log_success("Database configuration loaded")
     except Exception as e:
       self.log_error(f"Failed to load database configuration: {str(e)}")
       return False
 
     try:
-      from core.config.providers.redis import RedisConfig
-      redis_config = RedisConfig()
+      redis_config = config_registry.redis
       self.log_success("Redis configuration loaded")
     except Exception as e:
       self.log_error(f"Failed to load Redis configuration: {str(e)}")

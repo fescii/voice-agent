@@ -5,9 +5,9 @@ Handles initialization and cleanup of all system services.
 from typing import Dict, Any, List, Optional
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
-from core.config.app import ConfigurationManager
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -43,7 +43,7 @@ class StartupContext:
     """Mark a service as running."""
     if name in self.services:
       self.services[name].status = "running"
-      self.services[name].initialized_at = datetime.utcnow()
+      self.services[name].initialized_at = datetime.now(timezone.utc)
       if metadata:
         self.services[name].metadata.update(metadata)
 
@@ -78,7 +78,7 @@ class StartupManager:
 
   def __init__(self):
     self.context: Optional[StartupContext] = None
-    self._config_manager = ConfigurationManager()
+    # Use centralized config registry instead
 
   @asynccontextmanager
   async def startup_context(self):
@@ -88,7 +88,7 @@ class StartupManager:
     try:
       # Initialize startup context
       self.context = StartupContext(
-          configuration=self._config_manager.get_configuration()
+          configuration=config_registry
       )
 
       # Initialize all services
@@ -99,7 +99,7 @@ class StartupManager:
         failed_services = self.context.get_failed_services()
         raise RuntimeError(f"Critical services failed: {failed_services}")
 
-      total_time = (datetime.utcnow() -
+      total_time = (datetime.now(timezone.utc) -
                     self.context.startup_time).total_seconds()
       logger.info(f"✅ Application startup completed in {total_time:.2f}s")
 

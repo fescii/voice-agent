@@ -4,7 +4,7 @@ Save operations for transcripts.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.models.transcript import Transcript
 from core.logging.setup import get_logger
@@ -49,7 +49,7 @@ async def save_transcript(
         end_time=end_time,
         confidence_score=confidence_score,
         segment_id=segment_id,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         **kwargs
     )
 

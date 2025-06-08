@@ -1,5 +1,7 @@
 """
-OpenAI API configuration settings
+OpenAI API confi  class Config:
+    env_file = ".env"
+    env_prefix = "OPENAI_"ettings
 """
 import os
 from pydantic import BaseModel

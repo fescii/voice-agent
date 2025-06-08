@@ -3,7 +3,7 @@ Full example of using the advanced node/edge script flow system.
 """
 import asyncio
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from models.internal.callcontext import CallContext, CallDirection, CallStatus
 from services.llm.orchestrator import LLMOrchestrator

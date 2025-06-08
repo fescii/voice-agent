@@ -2,7 +2,7 @@
 Main memory manager orchestrating all memory operations.
 """
 from typing import Dict, Any, Optional, List, Set
-from datetime import datetime
+from datetime import datetime, timezone
 from core.logging.setup import get_logger
 from .conversation.manager import ConversationMemoryManager
 from .models.item import ConversationMemory

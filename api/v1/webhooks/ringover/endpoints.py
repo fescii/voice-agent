@@ -6,7 +6,7 @@ from typing import Optional
 
 from models.external.ringover.webhook import RingoverWebhookEvent
 from api.v1.webhooks.ringover.event import get_orchestrator, _verify_webhook_signature, _route_webhook_event
-from core.config.app import ConfigurationManager
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -114,11 +114,8 @@ async def _handle_webhook_event(
     # Get raw body for signature verification
     body = await request.body()
 
-    # Get system configuration for webhook verification
-    config_manager = ConfigurationManager()
-    system_config = config_manager.get_configuration()
-    webhook_secret = getattr(
-        system_config.telephony_config, 'webhook_secret', None)
+    # Get webhook secret from centralized config
+    webhook_secret = config_registry.ringover.webhook_secret
 
     # Verify webhook signature if secret is configured
     if webhook_secret and not _verify_webhook_signature(body, x_ringover_signature, webhook_secret):

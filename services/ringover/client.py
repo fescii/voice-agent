@@ -3,9 +3,9 @@ Ringover API client for call operations
 """
 import httpx
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
-from core.config.providers.ringover import RingoverConfig
+from core.config.registry import config_registry
 from models.external.ringover.apirequest import RingoverCallRequest
 from core.logging.setup import get_logger
 
@@ -16,7 +16,7 @@ class RingoverClient:
   """Client for interacting with Ringover API"""
 
   def __init__(self):
-    self.config = RingoverConfig()
+    self.config = config_registry.ringover
     self.base_url = self.config.api_base_url
     self.headers = {
         "Authorization": f"Bearer {self.config.api_key}",

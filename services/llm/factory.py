@@ -10,13 +10,15 @@ from services.llm.prompt.templates import (
     create_sales_agent_template
 )
 from services.llm.orchestrator import LLMOrchestrator
-from services.agent.core import AgentCore
 from services.tts.elevenlabs import ElevenLabsService
 from services.stt.whisper import WhisperService
 from services.llm.prompt.builder import PromptBuilder
 from services.llm.integration import VoiceAgentLLMIntegration
 from data.db.models.agentconfig import AgentConfig
 from core.config.services.tts.elevenlabs import ElevenLabsConfig
+
+if TYPE_CHECKING:
+  from services.agent.core import AgentCore
 
 if TYPE_CHECKING:
   from services.ringover.streaming import RingoverStreamHandler
@@ -67,6 +69,7 @@ def create_integrated_voice_agent(
       Integrated voice agent system
   """
   # Create the agent core
+  from services.agent.core import AgentCore
   agent_core = AgentCore(agent_config, llm_orchestrator)
 
   # Create the prompt manager

@@ -2,7 +2,7 @@
 Call state update service
 """
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from models.internal.callcontext import CallContext, CallStatus
 from data.redis.ops.session.store import store_call_session
@@ -36,7 +36,7 @@ class CallStateUpdater:
       if call_data:
         # Update the status in the data
         call_data["status"] = status.value
-        call_data["last_updated"] = datetime.utcnow().isoformat()
+        call_data["last_updated"] = datetime.now(timezone.utc).isoformat()
 
         # Add any additional data
         if additional_data:

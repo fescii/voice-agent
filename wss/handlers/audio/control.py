@@ -2,7 +2,7 @@
 WebSocket audio control handlers.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from wss.connection import WebSocketConnection
@@ -22,7 +22,7 @@ class AudioControlHandler:
         metadata["muted"] = True
         await connection.send_message("muted", {
             "call_id": connection.call_context.call_id,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         logger.info(f"Muted call for connection {connection.connection_id}")
     except Exception as e:
@@ -37,7 +37,7 @@ class AudioControlHandler:
         metadata["muted"] = False
         await connection.send_message("unmuted", {
             "call_id": connection.call_context.call_id,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         logger.info(f"Unmuted call for connection {connection.connection_id}")
     except Exception as e:

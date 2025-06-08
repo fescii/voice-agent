@@ -2,7 +2,7 @@
 WebSocket authentication handlers.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from wss.connection import WebSocketConnection
@@ -29,7 +29,7 @@ class AuthHandler:
       if await connection.authenticate(token):
         await connection.send_message("auth_success", {
             "user_id": connection.user_id,
-            "authenticated_at": datetime.utcnow().isoformat()
+            "authenticated_at": datetime.now(timezone.utc).isoformat()
         })
         logger.info(
             f"Successfully authenticated connection {connection.connection_id}")

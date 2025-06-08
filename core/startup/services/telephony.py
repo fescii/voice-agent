@@ -5,7 +5,7 @@ from typing import Dict, Any, TYPE_CHECKING
 
 from .base import BaseStartupService
 from services.ringover.api import RingoverAPIClient
-from core.config.providers.telephony import RingoverConfig, TelephonyProvider
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 if TYPE_CHECKING:
@@ -24,30 +24,24 @@ class TelephonyService(BaseStartupService):
   async def initialize(self, context: "StartupContext") -> Dict[str, Any]:
     """Initialize telephony provider and verify connectivity."""
     try:
-      telephony_config = context.configuration.telephony_config
+      # Use centralized config registry
+      telephony_config = config_registry.ringover
 
-      if isinstance(telephony_config, RingoverConfig):
-        # Initialize Ringover API client
-        self._api_client = RingoverAPIClient(telephony_config)
+      # Initialize Ringover API client
+      self._api_client = RingoverAPIClient()
 
-        # Test connection by listing active calls (simpler API test)
-        async with self._api_client:
-          calls = await self._api_client.list_active_calls()
+      # Test connection by listing active calls (simpler API test)
+      async with self._api_client:
+        calls = await self._api_client.list_active_calls()
 
-        logger.info("Telephony provider connection verified")
+      logger.info("Telephony provider connection verified")
 
-        return {
-            "provider": telephony_config.provider.value,
-            "api_url": telephony_config.base_url,
-            "active_calls": len(calls),
-            "status": "connected"
-        }
-      else:
-        logger.warning("Unknown telephony provider configuration")
-        return {
-            "provider": "unknown",
-            "status": "not_configured"
-        }
+      return {
+          "provider": "ringover",
+          "api_url": telephony_config.api_base_url,
+          "active_calls": len(calls),
+          "status": "connected"
+      }
 
     except Exception as e:
       logger.error(f"Telephony initialization failed: {e}")

@@ -3,7 +3,7 @@ Database models for agent memory storage.
 """
 from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, JSON, Boolean, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.base import BaseModel
 

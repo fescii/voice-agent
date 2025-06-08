@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, Set
 
 from pydantic import BaseModel
@@ -40,7 +40,7 @@ class RealtimeTranscription:
   ) -> str:
     """Start a real-time transcription session."""
 
-    session_id = f"rt_{call_context.call_id}_{datetime.utcnow().timestamp()}"
+    session_id = f"rt_{call_context.call_id}_{datetime.now(timezone.utc).timestamp()}"
 
     self.logger.info(f"Starting real-time transcription session: {session_id}")
 
@@ -48,7 +48,7 @@ class RealtimeTranscription:
     session = RealtimeTranscriptionSession(
         call_id=call_context.call_id,
         session_id=session_id,
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         language=language
     )
 
@@ -209,7 +209,7 @@ class RealtimeTranscription:
         "language": session.language,
         "audio_queue_size": audio_queue.qsize() if audio_queue else 0,
         "subscriber_count": len(subscribers),
-        "uptime_seconds": (datetime.utcnow() - session.started_at).total_seconds()
+        "uptime_seconds": (datetime.now(timezone.utc) - session.started_at).total_seconds()
     }
 
     return stats

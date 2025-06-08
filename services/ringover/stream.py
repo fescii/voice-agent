@@ -11,7 +11,8 @@ if TYPE_CHECKING:
   import websockets
 
 from core.logging.setup import get_logger
-from core.config.providers.telephony import RingoverConfig
+from core.config.registry import config_registry
+from core.config.providers.ringover import RingoverConfig
 
 logger = get_logger(__name__)
 

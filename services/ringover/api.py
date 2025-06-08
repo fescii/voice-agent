@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from core.logging.setup import get_logger
-from core.config.providers.telephony import RingoverConfig
+from core.config.registry import config_registry
 
 logger = get_logger(__name__)
 
@@ -51,24 +51,22 @@ class RingoverAPIClient:
   and webhook event processing.
   """
 
-  def __init__(self, config: RingoverConfig):
+  def __init__(self):
     """
     Initialize Ringover API client.
-
-    Args:
-        config: Ringover configuration
+    Uses the centralized config registry for configuration.
     """
-    self.config = config
+    self.config = config_registry.ringover
     self.session: Optional[aiohttp.ClientSession] = None
     self.headers = {
-        "Authorization": f"Bearer {config.api_key}",
+        "Authorization": f"Bearer {self.config.api_key}",
         "Content-Type": "application/json"
     }
 
   async def __aenter__(self):
     """Async context manager entry."""
     self.session = aiohttp.ClientSession(
-        base_url=self.config.base_url,
+        base_url=self.config.api_base_url,
         headers=self.headers,
         timeout=aiohttp.ClientTimeout(total=30)
     )
@@ -104,7 +102,7 @@ class RingoverAPIClient:
         "to": to_number,
         "from": from_number,
         "agent_id": agent_id,
-        "webhook_url": f"{self.config.base_url}/webhooks/ringover",
+        "webhook_url": f"{self.config.api_base_url}/webhooks/ringover",
         "metadata": metadata or {}
     }
 

@@ -10,9 +10,7 @@ from services.llm.providers.gemini import GeminiProvider
 from services.llm.providers.anthropic import AnthropicProvider
 from models.external.llm.request import LLMRequest, LLMMessage
 from models.external.llm.response import LLMResponse
-from core.config.services.llm.openai import OpenAIConfig
-from core.config.services.llm.gemini import GeminiConfig
-from core.config.services.llm.anthropic import AnthropicConfig
+from core.config.registry import config_registry
 from core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -35,30 +33,46 @@ class LLMOrchestrator:
 
   def _initialize_providers(self):
     """Initialize all available LLM providers."""
+    # Get LLM config from centralized registry
+    llm_config = config_registry.llm
+
     # Initialize OpenAI
     try:
-      openai_config = OpenAIConfig()
-      self._providers[LLMProviderType.OPENAI.value] = OpenAIProvider(
-          openai_config.dict())
-      self.logger.info("Initialized OpenAI provider")
+      if llm_config.provider.value == 'openai':
+        self._providers[LLMProviderType.OPENAI.value] = OpenAIProvider({
+            'api_key': llm_config.api_key,
+            'model': llm_config.model,
+            'base_url': llm_config.base_url,
+            'max_tokens': llm_config.max_tokens,
+            'temperature': llm_config.temperature
+        })
+        self.logger.info("Initialized OpenAI provider")
     except Exception as e:
       self.logger.warning(f"Failed to initialize OpenAI provider: {e}")
 
     # Initialize Gemini
     try:
-      gemini_config = GeminiConfig()
-      self._providers[LLMProviderType.GEMINI.value] = GeminiProvider(
-          gemini_config.dict())
-      self.logger.info("Initialized Gemini provider")
+      if llm_config.provider.value == 'google':
+        self._providers[LLMProviderType.GEMINI.value] = GeminiProvider({
+            'api_key': llm_config.api_key,
+            'model': llm_config.model,
+            'max_tokens': llm_config.max_tokens,
+            'temperature': llm_config.temperature
+        })
+        self.logger.info("Initialized Gemini provider")
     except Exception as e:
       self.logger.warning(f"Failed to initialize Gemini provider: {e}")
 
     # Initialize Anthropic
     try:
-      anthropic_config = AnthropicConfig()
-      self._providers[LLMProviderType.ANTHROPIC.value] = AnthropicProvider(
-          anthropic_config.dict())
-      self.logger.info("Initialized Anthropic provider")
+      if llm_config.provider.value == 'anthropic':
+        self._providers[LLMProviderType.ANTHROPIC.value] = AnthropicProvider({
+            'api_key': llm_config.api_key,
+            'model': llm_config.model,
+            'max_tokens': llm_config.max_tokens,
+            'temperature': llm_config.temperature
+        })
+        self.logger.info("Initialized Anthropic provider")
     except Exception as e:
       self.logger.warning(f"Failed to initialize Anthropic provider: {e}")
 

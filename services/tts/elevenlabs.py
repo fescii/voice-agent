@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any, AsyncGenerator
 import httpx
 from io import BytesIO
 
-from core.config.services.tts.elevenlabs import ElevenLabsConfig
+from core.config.registry import config_registry
 from core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -16,13 +16,19 @@ logger = get_logger(__name__)
 class ElevenLabsService:
   """ElevenLabs TTS service for converting text to speech."""
 
-  def __init__(self, config: ElevenLabsConfig):
+  def __init__(self, config=None):
     """Initialize ElevenLabs service."""
-    self.config = config
+    # Use centralized config if no config provided
+    if config is None:
+      self.config = config_registry.tts
+    else:
+      self.config = config
+
     self.client = httpx.AsyncClient(
-        base_url=config.base_url,
+        base_url=getattr(self.config, 'base_url',
+                         'https://api.elevenlabs.io/v1'),
         headers={
-            "xi-api-key": config.api_key,
+            "xi-api-key": self.config.api_key,
             "Content-Type": "application/json"
         }
     )
@@ -46,15 +52,16 @@ class ElevenLabsService:
     Returns:
         Audio data as bytes
     """
-    voice_id = voice_id or self.config.default_voice_id
-    model_id = model_id or self.config.default_model_id
+    voice_id = voice_id or getattr(self.config, 'voice_id', 'default')
+    model_id = model_id or getattr(
+        self.config, 'model', 'eleven_monolingual_v1')
 
     if not voice_settings:
       voice_settings = {
-          "stability": self.config.stability,
-          "similarity_boost": self.config.similarity_boost,
-          "style": self.config.style,
-          "use_speaker_boost": self.config.use_speaker_boost
+          "stability": getattr(self.config, 'stability', 0.5),
+          "similarity_boost": getattr(self.config, 'similarity_boost', 0.5),
+          "style": getattr(self.config, 'style', 0.0),
+          "use_speaker_boost": getattr(self.config, 'use_speaker_boost', True)
       }
 
     try:
@@ -104,15 +111,16 @@ class ElevenLabsService:
     Yields:
         Audio data chunks as bytes
     """
-    voice_id = voice_id or self.config.default_voice_id
-    model_id = model_id or self.config.default_model_id
+    voice_id = voice_id or getattr(self.config, 'voice_id', 'default')
+    model_id = model_id or getattr(
+        self.config, 'model', 'eleven_monolingual_v1')
 
     if not voice_settings:
       voice_settings = {
-          "stability": self.config.stability,
-          "similarity_boost": self.config.similarity_boost,
-          "style": self.config.style,
-          "use_speaker_boost": self.config.use_speaker_boost
+          "stability": getattr(self.config, 'stability', 0.5),
+          "similarity_boost": getattr(self.config, 'similarity_boost', 0.5),
+          "style": getattr(self.config, 'style', 0.0),
+          "use_speaker_boost": getattr(self.config, 'use_speaker_boost', True)
       }
 
     try:
@@ -223,7 +231,9 @@ class ElevenLabsService:
       }
 
       if labels:
-        data["labels"] = labels
+        import json
+        data["labels"] = json.dumps(
+            labels) if isinstance(labels, dict) else labels
 
       response = await self.client.post(
           "/voices/add",

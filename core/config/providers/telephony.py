@@ -46,8 +46,6 @@ class RingoverConfig(TelephonyConfig):
   def __post_init__(self):
     """Set Ringover-specific defaults."""
     if not self.base_url:
-      self.base_url = os.getenv(
-          "RINGOVER_BASE_URL", "https://public-api.ringover.com")
+      self.base_url = "https://public-api.ringover.com"
     if not self.websocket_url:
-      self.websocket_url = os.getenv(
-          "RINGOVER_WEBSOCKET_URL", "wss://api.ringover.com/ws")
+      self.websocket_url = "wss://api.ringover.com/ws"

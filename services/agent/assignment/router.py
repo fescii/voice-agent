@@ -2,7 +2,7 @@
 Agent router service for managing agent assignments and routing
 """
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.models.agentconfig import AgentConfig
 from data.db.ops.agent.config import AgentConfigOps

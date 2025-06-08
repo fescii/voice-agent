@@ -2,7 +2,7 @@
 Memory search operations.
 """
 from typing import Dict, Any, Optional, List, Set
-from datetime import datetime
+from datetime import datetime, timezone
 from core.logging.setup import get_logger
 from ..models.item import ConversationMemory, MemoryItem
 

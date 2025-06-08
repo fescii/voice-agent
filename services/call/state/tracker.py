@@ -1,7 +1,7 @@
 """Call state tracker for monitoring call metrics and analytics."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel
@@ -38,7 +38,7 @@ class CallStateTracker:
 
     self._call_metrics[call_id] = CallMetrics(
         call_id=call_id,
-        start_time=datetime.utcnow(),
+        start_time=datetime.now(timezone.utc),
         state_transitions=[]
     )
     self._state_timers[call_id] = {}
@@ -160,7 +160,7 @@ class CallStateTracker:
     metrics = self._call_metrics[call_id]
 
     if metrics.end_time is None:
-      metrics.end_time = datetime.utcnow()
+      metrics.end_time = datetime.now(timezone.utc)
 
     if metrics.start_time and metrics.end_time:
       metrics.total_duration = metrics.end_time - metrics.start_time

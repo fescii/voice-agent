@@ -4,7 +4,7 @@ Agent configuration database operations
 from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.models.agentconfig import AgentConfig
 from data.db.connection import get_db_session
@@ -92,7 +92,7 @@ class AgentConfigOps:
     async with get_db_session() as session:
       try:
         # Update timestamp
-        config_data['updated_at'] = datetime.utcnow()
+        config_data['updated_at'] = datetime.now(timezone.utc)
 
         stmt = (
             update(AgentConfig)

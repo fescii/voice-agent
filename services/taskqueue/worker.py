@@ -2,7 +2,7 @@
 
 import asyncio
 import signal
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Callable, Any, Optional
 
 from core.logging.setup import get_logger
@@ -40,7 +40,7 @@ class TaskWorker:
     self.logger.info(f"Starting task worker: {self.worker_id}")
 
     self.is_running = True
-    self.stats["started_at"] = datetime.utcnow()
+    self.stats["started_at"] = datetime.now(timezone.utc)
 
     # Setup signal handlers for graceful shutdown
     loop = asyncio.get_event_loop()
@@ -85,7 +85,7 @@ class TaskWorker:
   async def _process_task(self, task: Task) -> None:
     """Process a single task."""
 
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     try:
       self.logger.info(f"Processing task {task.id}: {task.name}")
@@ -105,7 +105,7 @@ class TaskWorker:
       await self.task_queue.complete_task(task.id, result)
       self.stats["completed"] += 1
 
-      duration = (datetime.utcnow() - start_time).total_seconds()
+      duration = (datetime.now(timezone.utc) - start_time).total_seconds()
       self.logger.info(
           f"Completed task {task.id} in {duration:.2f}s"
       )
@@ -153,7 +153,8 @@ class TaskWorker:
     stats["registered_handlers"] = list(self.handlers.keys())
 
     if stats["started_at"]:
-      uptime = (datetime.utcnow() - stats["started_at"]).total_seconds()
+      uptime = (datetime.now(timezone.utc) -
+                stats["started_at"]).total_seconds()
       stats["uptime_seconds"] = uptime
 
     return stats

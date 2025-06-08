@@ -2,7 +2,7 @@
 Custom log formatting
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class CustomFormatter(logging.Formatter):

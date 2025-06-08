@@ -2,7 +2,7 @@
 WebSocket call transfer handlers.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from wss.connection import WebSocketConnection
@@ -54,7 +54,7 @@ class TransferHandler:
         await connection.send_message("call_transferred", {
             "call_id": connection.call_context.call_id,
             "target_number": target_number,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         logger.info(
             f"Transferred call {connection.call_context.call_id} to {target_number}")

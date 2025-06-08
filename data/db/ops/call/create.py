@@ -4,7 +4,7 @@ Create operations for call logs.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.models.calllog import CallLog, CallStatus, CallDirection
 from core.logging import get_logger
@@ -47,7 +47,7 @@ async def create_call_log(
         callee_number=callee_number,
         direction=direction,
         status=CallStatus.INITIATED,
-        initiated_at=datetime.utcnow(),
+        initiated_at=datetime.now(timezone.utc),
         **kwargs
     )
 

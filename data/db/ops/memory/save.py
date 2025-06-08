@@ -2,7 +2,7 @@
 Save agent memory to PostgreSQL database.
 """
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
@@ -39,7 +39,7 @@ async def save_agent_memory(
     stmt = insert(AgentMemory).values(
         agent_id=agent_id,
         conversation_id=conversation_id,
-        last_accessed=datetime.utcnow(),
+        last_accessed=datetime.now(timezone.utc),
         short_term=short_term,
         long_term=long_term,
         working_memory=working_memory
@@ -49,7 +49,7 @@ async def save_agent_memory(
     stmt = stmt.on_conflict_do_update(
         constraint=f"{AgentMemory.__tablename__}_agent_id_conversation_id_key",
         set_={
-            "last_accessed": datetime.utcnow(),
+            "last_accessed": datetime.now(timezone.utc),
             "short_term": short_term,
             "long_term": long_term,
             "working_memory": working_memory

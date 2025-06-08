@@ -1,5 +1,7 @@
 """
-Anthropic Claude API configuration settings
+Anthropic Claud  class Config:
+    env_file = ".env"
+    env_prefix = "ANTHROPIC_"figuration settings
 """
 import os
 from pydantic import BaseModel

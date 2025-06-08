@@ -3,7 +3,7 @@ Pydantic schemas for agent-related responses
 """
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class AgentConfigResponse(BaseModel):

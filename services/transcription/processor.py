@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, AsyncGenerator
 
 import httpx
@@ -69,7 +69,7 @@ class TranscriptionProcessor:
           segments=result["segments"],
           full_text=result["text"],
           language=result.get("language"),
-          timestamp=datetime.utcnow(),
+          timestamp=datetime.now(timezone.utc),
           audio_duration=result.get("duration", 0.0)
       )
 

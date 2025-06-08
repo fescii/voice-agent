@@ -4,7 +4,7 @@ Usage examples for script-driven voice agent flow.
 import asyncio
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 from models.internal.callcontext import CallContext, CallDirection, CallStatus
 from services.llm.orchestrator import LLMOrchestrator

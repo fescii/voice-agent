@@ -5,7 +5,7 @@ import asyncio
 from typing import Dict, Any, Optional, Callable, Awaitable, List
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.logging.setup import get_logger
 from services.stt.whisper import WhisperService

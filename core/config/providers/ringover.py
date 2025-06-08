@@ -21,22 +21,8 @@ class RingoverConfig(BaseModel):
 
   # Media streaming settings
   streamer_auth_token: str = ""
+  websocket_url: str = ""
 
   class Config:
     env_file = ".env"
     env_prefix = "RINGOVER_"
-
-  def __init__(self, **kwargs):
-    super().__init__(**kwargs)
-    # Load from environment variables
-    self.api_key = os.getenv("RINGOVER_API_KEY", self.api_key)
-    self.api_base_url = os.getenv(
-        "RINGOVER_API_BASE_URL", "https://public-api.ringover.com/v2.1")
-    self.default_caller_id = os.getenv(
-        "RINGOVER_DEFAULT_CALLER_ID", self.default_caller_id)
-    self.webhook_secret = os.getenv(
-        "RINGOVER_WEBHOOK_SECRET", self.webhook_secret)
-    self.webhook_url = os.getenv(
-        "RINGOVER_WEBHOOK_URL", self.webhook_url)
-    self.streamer_auth_token = os.getenv(
-        "RINGOVER_STREAMER_AUTH_TOKEN", self.streamer_auth_token)

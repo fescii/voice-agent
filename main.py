@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from api.v1 import router as api_v1_router
-from core.config.appconfig.main import AppConfig
+from core.config.registry import config_registry
 from core.logging.setup import setup_logging
 from core.startup.manager import StartupManager
 from core.startup.context import get_startup_context
@@ -36,17 +36,17 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
   """Create and configure the FastAPI application"""
 
+  # Initialize centralized configuration registry
+  config_registry.initialize()
+
   # Setup logging
   setup_logging()
 
-  # Load app configuration
-  config = AppConfig()
-
   # Create FastAPI app with lifespan context manager
   app = FastAPI(
-      title=config.app_name,
-      version=config.version,
-      debug=config.debug_mode,
+      title="AI Voice Agent System",
+      version="1.0.0",
+      debug=True,  # TODO: Get from centralized config
       description="AI Voice Agent System with Ringover Integration",
       lifespan=lifespan
   )
@@ -93,11 +93,10 @@ def create_app() -> FastAPI:
 app = create_app()
 
 if __name__ == "__main__":
-  config = AppConfig()
   uvicorn.run(
       "main:app",
       host="0.0.0.0",
-      port=getattr(config, "server_port", 8000),
-      reload=config.debug_mode,
+      port=8000,  # TODO: Get from centralized config
+      reload=True,  # TODO: Get from centralized config
       log_level="info"
   )

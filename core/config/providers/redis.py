@@ -1,5 +1,7 @@
 """
-Redis configuration settings
+Redis configurat  class Config:
+    env_file = ".env"
+    env_prefix = "REDIS_"s
 """
 import os
 from pydantic import BaseModel

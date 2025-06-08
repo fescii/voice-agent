@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, List

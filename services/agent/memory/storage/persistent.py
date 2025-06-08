@@ -5,7 +5,7 @@ This implementation uses PostgreSQL database for persistent storage.
 """
 import json
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from core.logging.setup import get_logger

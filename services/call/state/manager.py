@@ -1,7 +1,7 @@
 """Call state manager for tracking and managing call states."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, Optional, Set, Callable, Awaitable, Union
 
@@ -60,7 +60,7 @@ class CallStateManager:
     call_state = CallStateInfo(
         call_id=call_id,
         state=CallState.INITIALIZING,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         agent_id=agent_id,
         user_id=user_id,
         metadata=metadata or {}
@@ -98,7 +98,7 @@ class CallStateManager:
           call_id=call_id,
           state=new_state,
           previous_state=current_state.state,
-          timestamp=datetime.utcnow(),
+          timestamp=datetime.now(timezone.utc),
           agent_id=current_state.agent_id,
           user_id=current_state.user_id,
           metadata={**current_state.metadata, **(metadata or {})}

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.models.calllog import CallLog, CallStatus
 from core.logging import get_logger
@@ -32,13 +32,13 @@ async def update_call_status(
       True if update was successful
   """
   try:
-    update_data = {"status": status, "updated_at": datetime.utcnow()}
+    update_data = {"status": status, "updated_at": datetime.now(timezone.utc)}
 
     # Add timing fields based on status
     if status == CallStatus.ANSWERED:
-      update_data["answered_at"] = datetime.utcnow()
+      update_data["answered_at"] = datetime.now(timezone.utc)
     elif status in [CallStatus.COMPLETED, CallStatus.FAILED, CallStatus.TERMINATED]:
-      update_data["ended_at"] = datetime.utcnow()
+      update_data["ended_at"] = datetime.now(timezone.utc)
 
     # Add any additional fields
     update_data.update(kwargs)
@@ -84,7 +84,7 @@ async def update_call_log(
     if not kwargs:
       return True
 
-    update_data = {**kwargs, "updated_at": datetime.utcnow()}
+    update_data = {**kwargs, "updated_at": datetime.now(timezone.utc)}
 
     result = await session.execute(
         update(CallLog)

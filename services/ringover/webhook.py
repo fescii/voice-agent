@@ -5,7 +5,7 @@ import json
 from typing import Dict, Any, Optional, Callable, Awaitable
 from dataclasses import dataclass
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.logging.setup import get_logger
 
@@ -174,7 +174,7 @@ class RingoverWebhookProcessor:
         timestamp = datetime.fromisoformat(
             timestamp_str.replace('Z', '+00:00'))
       else:
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
 
       # Extract event data
       event_data = payload.get("data", {})
@@ -333,11 +333,9 @@ class RingoverWebhookConfig:
   """Helper class for Ringover webhook configuration"""
 
   def __init__(self):
-    from core.config.app import ConfigurationManager
-    config_manager = ConfigurationManager()
-    self.config = config_manager.get_configuration()
-    self.base_url = getattr(self.config.telephony_config,
-                            'webhook_url', '')
+    from core.config.registry import config_registry
+    self.config = config_registry.ringover
+    self.base_url = self.config.webhook_url or ""
 
   def get_webhook_endpoint(self) -> str:
     """Get the main webhook endpoint URL"""
@@ -345,7 +343,7 @@ class RingoverWebhookConfig:
 
   def get_webhook_secret(self) -> str:
     """Get the webhook secret for verification"""
-    return getattr(self.config.telephony_config, 'webhook_secret', '')
+    return self.config.webhook_secret or ""
 
   def get_supported_events(self) -> list[str]:
     """Get list of supported webhook event types"""

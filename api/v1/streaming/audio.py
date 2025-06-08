@@ -8,9 +8,7 @@ import json
 
 from services.call.management.orchestrator import CallOrchestrator
 from services.ringover.stream import RingoverWebSocketStreamer, AudioFrame
-from core.config import SystemConfiguration, ConfigurationManager
-from core.config.providers.telephony import TelephonyProvider
-from core.config.providers.telephony import RingoverConfig as TelephonyRingoverConfig
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -25,9 +23,10 @@ def get_orchestrator() -> CallOrchestrator:
   """Get or create call orchestrator instance."""
   global _orchestrator
   if _orchestrator is None:
-    config_manager = ConfigurationManager()
-    system_config = config_manager.get_configuration()
-    _orchestrator = CallOrchestrator(system_config)
+    # Ensure config registry is initialized before creating orchestrator
+    if not hasattr(config_registry, '_initialized') or not config_registry._initialized:
+      config_registry.initialize()
+    _orchestrator = CallOrchestrator()
   return _orchestrator
 
 
@@ -54,7 +53,7 @@ async def audio_streaming_websocket(
 
     # Get orchestrator and verify session exists
     orchestrator = get_orchestrator()
-    session = orchestrator.active_sessions.get(session_id)
+    session = await orchestrator.get_session_by_id(session_id)
 
     if not session:
       await websocket.send_text(json.dumps({
@@ -64,21 +63,8 @@ async def audio_streaming_websocket(
       await websocket.close(code=1008, reason="Session not found")
       return
 
-    # Initialize Ringover WebSocket streamer
-    orchestrator = get_orchestrator()
-
-    # Get Ringover config from system config
-    if isinstance(orchestrator.system_config.telephony_config, TelephonyRingoverConfig):
-      ringover_config = orchestrator.system_config.telephony_config
-    else:
-      # Create a default RingoverConfig if needed
-      from core.config.providers.telephony import RingoverConfig
-      # The config will load values from environment variables via the config system
-      ringover_config = RingoverConfig(
-          provider=TelephonyProvider.RINGOVER,
-          api_key=""  # Will be loaded from environment via config system
-      )
-
+    # Initialize Ringover WebSocket streamer using centralized config
+    ringover_config = config_registry.ringover
     ringover_streamer = RingoverWebSocketStreamer(ringover_config)
 
     # Set up handlers
@@ -90,13 +76,12 @@ async def audio_streaming_websocket(
     _active_streamers[session_id] = ringover_streamer
 
     # Connect to Ringover audio stream
-    # Get auth token from standalone config for streaming
-    from core.config.providers.ringover import RingoverConfig as StandaloneRingoverConfig
-    standalone_config = StandaloneRingoverConfig()
+    # Get auth token from centralized config
+    auth_token = ringover_config.streamer_auth_token or "dummy_token"
 
     success = await ringover_streamer.connect(
         call_id=session.call_info.call_id,
-        auth_token=standalone_config.streamer_auth_token or "dummy_token"
+        auth_token=auth_token
     )
     if not success:
       await websocket.send_text(json.dumps({
@@ -219,7 +204,7 @@ async def audio_control(session_id: str, action: Dict[str, Any]):
   """
   try:
     orchestrator = get_orchestrator()
-    session = orchestrator.active_sessions.get(session_id)
+    session = await orchestrator.get_session_by_id(session_id)
 
     if not session:
       raise HTTPException(
@@ -278,7 +263,7 @@ async def audio_stream_status(session_id: str):
   """
   try:
     orchestrator = get_orchestrator()
-    session = orchestrator.active_sessions.get(session_id)
+    session = await orchestrator.get_session_by_id(session_id)
 
     if not session:
       raise HTTPException(

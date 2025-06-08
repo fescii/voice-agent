@@ -3,7 +3,7 @@ Redis connection setup and client management.
 """
 import redis.asyncio as redis
 from typing import Optional
-from core.config.providers.redis import RedisConfig
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -35,7 +35,7 @@ async def connect_redis() -> None:
   global _redis_client
 
   try:
-    config = RedisConfig()
+    config = config_registry.redis
 
     _redis_client = redis.Redis(
         host=config.host,

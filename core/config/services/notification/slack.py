@@ -1,5 +1,7 @@
 """
-Slack notification configuration settings
+Slack notifica  class Config:
+    env_file = ".env"
+    env_prefix = "SLACK_"ration settings
 """
 import os
 from pydantic import BaseModel

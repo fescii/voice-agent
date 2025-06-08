@@ -1,5 +1,7 @@
 """
-OpenAI Whisper STT API configuration settings
+OpenAI Whisper S  class Config:
+    env_file = ".env"
+    env_prefix = "WHISPER_"nfiguration settings
 """
 import os
 from pydantic import BaseModel

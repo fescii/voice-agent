@@ -1,5 +1,7 @@
 """
-Email notification configuration settings
+Email notification  class Config:
+    env_file = ".env"
+    env_prefix = "EMAIL_"n settings
 """
 import os
 from pydantic import BaseModel

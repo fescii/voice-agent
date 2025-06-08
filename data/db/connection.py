@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
-from core.config.providers.database import DatabaseConfig
+from core.config.registry import config_registry
 
 # Global connection variables - initialized lazily
 _async_engine = None
@@ -19,7 +19,7 @@ def get_async_engine():
   """Get async database engine (lazy initialization)."""
   global _async_engine
   if _async_engine is None:
-    db_config = DatabaseConfig()
+    db_config = config_registry.database
     _async_engine = create_async_engine(
         db_config.async_database_url,
         echo=db_config.echo_sql,
@@ -34,7 +34,7 @@ def get_sync_engine():
   """Get sync database engine (lazy initialization)."""
   global _sync_engine
   if _sync_engine is None:
-    db_config = DatabaseConfig()
+    db_config = config_registry.database
     _sync_engine = create_engine(
         db_config.sync_database_url,
         echo=db_config.echo_sql,

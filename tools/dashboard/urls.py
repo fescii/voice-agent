@@ -3,7 +3,7 @@
 Generate complete list of webhook URLs configured in the system for Ringover dashboard setup
 """
 
-from core.config.providers.ringover import RingoverConfig
+from core.config.registry import config_registry
 import sys
 from pathlib import Path
 
@@ -15,8 +15,8 @@ sys.path.insert(0, str(project_root))
 def get_actual_webhook_urls():
   """Generate actual implemented webhook URLs for Ringover dashboard"""
 
-  # Load configuration
-  config = RingoverConfig()
+  # Get configuration from centralized registry
+  config = config_registry.ringover
 
   # Get base URL from config
   base_url = config.webhook_url

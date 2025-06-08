@@ -9,8 +9,7 @@ import hashlib
 from models.external.ringover.webhook import RingoverWebhookEvent
 from services.call.management.orchestrator import CallOrchestrator
 from services.ringover import CallInfo, CallDirection, CallStatus
-from core.config.app import ConfigurationManager
-from core.config.providers.telephony import RingoverConfig, TelephonyProvider
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -24,9 +23,10 @@ def get_orchestrator() -> CallOrchestrator:
   """Get or create call orchestrator instance."""
   global _orchestrator
   if _orchestrator is None:
-    config_manager = ConfigurationManager()
-    system_config = config_manager.get_configuration()
-    _orchestrator = CallOrchestrator(system_config)
+    # Ensure config registry is initialized before creating orchestrator
+    if not hasattr(config_registry, '_initialized') or not config_registry._initialized:
+      config_registry.initialize()
+    _orchestrator = CallOrchestrator()
   return _orchestrator
 
 
@@ -53,10 +53,7 @@ async def handle_ringover_event(
     body = await request.body()
 
     # Get system configuration for webhook verification
-    config_manager = ConfigurationManager()
-    system_config = config_manager.get_configuration()
-    webhook_secret = getattr(
-        system_config.telephony_config, 'webhook_secret', None)
+    webhook_secret = config_registry.ringover.webhook_secret
 
     # Verify webhook signature if secret is configured
     if webhook_secret and not _verify_webhook_signature(body, x_ringover_signature, webhook_secret):
@@ -213,15 +210,17 @@ async def _handle_call_answered(event: RingoverWebhookEvent, orchestrator: CallO
   """Handle call answered event"""
   logger.info(f"Call {event.call_id} answered")
   # Update call status in active sessions
-  for session_id, session in orchestrator.active_sessions.items():
+  active_sessions = await orchestrator.get_active_sessions()
+  for session in active_sessions:
     if session.call_info.call_id == event.call_id:
       session.call_info.status = CallStatus.ANSWERED
-      logger.info(f"Updated call status to answered for session {session_id}")
+      logger.info(f"Updated call status to answered for session {session.call_context.session_id}")
 
 
 async def _handle_call_ended(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
   """Handle call ended event"""
-  session_ids = [sid for sid, session in orchestrator.active_sessions.items()
+  active_sessions = await orchestrator.get_active_sessions()
+  session_ids = [session.call_context.session_id for session in active_sessions
                  if session.call_info.call_id == event.call_id]
   for session_id in session_ids:
     await orchestrator.end_call(session_id)
@@ -230,7 +229,8 @@ async def _handle_call_ended(event: RingoverWebhookEvent, orchestrator: CallOrch
 
 async def _handle_call_failed_or_missed(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
   """Handle call failure or missed call event"""
-  session_ids = [sid for sid, session in orchestrator.active_sessions.items()
+  active_sessions = await orchestrator.get_active_sessions()
+  session_ids = [session.call_context.session_id for session in active_sessions
                  if session.call_info.call_id == event.call_id]
   for session_id in session_ids:
     await orchestrator.end_call(session_id)

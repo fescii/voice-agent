@@ -3,7 +3,7 @@ Gemini LLM provider implementation.
 """
 import asyncio
 from typing import List, Dict, Any, AsyncIterator, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
   import google.generativeai as genai
@@ -20,7 +20,7 @@ from .base import BaseLLMProvider
 from models.external.llm.request import LLMRequest, LLMMessage
 from models.external.llm.response import LLMResponse, LLMChoice, LLMUsage
 from models.external.llm.response import LLMMessage as ResponseLLMMessage
-from core.config.services.llm.gemini import GeminiConfig
+from core.config.registry import config_registry
 from core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -31,7 +31,14 @@ class GeminiProvider(BaseLLMProvider):
 
   def __init__(self, config: Optional[Dict[str, Any]] = None):
     if config is None:
-      config = GeminiConfig().dict()
+      # Use centralized config registry
+      llm_config = config_registry.llm
+      config = {
+          'api_key': llm_config.api_key,
+          'model': llm_config.model,
+          'max_tokens': llm_config.max_tokens,
+          'temperature': llm_config.temperature
+      }
     super().__init__(config)
 
     self.logger = logger
@@ -139,7 +146,7 @@ class GeminiProvider(BaseLLMProvider):
         )
 
       return LLMResponse(
-          id=f"gemini-{datetime.utcnow().isoformat()}",
+          id=f"gemini-{datetime.now(timezone.utc).isoformat()}",
           provider=self.provider_name,
           model=request.model,
           choices=[choice],

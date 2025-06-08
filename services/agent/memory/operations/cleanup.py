@@ -2,7 +2,7 @@
 Memory cleanup operations.
 """
 from typing import Dict, List
-from datetime import datetime
+from datetime import datetime, timezone
 from core.logging.setup import get_logger
 from data.redis.ops.session.delete import delete_session_data
 from ..models.item import ConversationMemory

@@ -3,7 +3,7 @@ Handles outbound call initiation sequence
 """
 import uuid
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from models.internal.callcontext import CallContext, CallResult, CallStatus, CallDirection
 from models.external.ringover.apirequest import RingoverCallRequest
@@ -12,7 +12,7 @@ from services.call.state.updater import CallStateUpdater
 from data.db.ops.call.create import create_call_log
 from data.db.models.calllog import CallDirection as DBCallDirection
 from data.db.connection import get_db_session
-from core.config.providers.ringover import RingoverConfig
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -24,7 +24,7 @@ class OutboundCallService:
   def __init__(self):
     self.ringover_client = RingoverClient()
     self.state_updater = CallStateUpdater()
-    self.ringover_config = RingoverConfig()
+    self.ringover_config = config_registry.ringover
 
   async def initiate_call(
       self,
@@ -85,7 +85,7 @@ class OutboundCallService:
           agent_id=agent_id,
           direction=CallDirection.OUTBOUND,
           status=CallStatus.INITIATED,
-          start_time=datetime.utcnow(),
+          start_time=datetime.now(timezone.utc),
           end_time=None,
           duration=None,
           ringover_call_id=None,

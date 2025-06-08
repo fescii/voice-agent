@@ -7,7 +7,7 @@ import asyncpg
 
 from core.startup.services.base import BaseStartupService
 from data.db.connection import get_async_engine
-from core.config.providers.database import DatabaseConfig
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 from .queries import (
     HEALTH_CHECK_QUERY,
@@ -28,7 +28,7 @@ class DatabaseService(BaseStartupService):
 
   def __init__(self):
     super().__init__("database", is_critical=True)
-    self.db_config = DatabaseConfig()
+    self.db_config = config_registry.database
 
   async def initialize(self, context: "StartupContext") -> Dict[str, Any]:
     """Initialize PostgreSQL database connection and verify connectivity."""

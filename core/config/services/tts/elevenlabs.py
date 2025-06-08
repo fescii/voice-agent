@@ -1,5 +1,7 @@
 """
-ElevenLabs TTS API configuration settings
+ElevenLabs TTS A  class Config:
+    env_file = ".env"
+    env_prefix = "ELEVENLABS_"ation settings
 """
 import os
 from pydantic import BaseModel

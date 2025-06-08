@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from data.db.models.agentconfig import AgentConfig
 from core.logging import get_logger
@@ -33,7 +33,7 @@ async def update_agent_config(
     if not kwargs:
       return True
 
-    update_data = {**kwargs, "updated_at": datetime.utcnow()}
+    update_data = {**kwargs, "updated_at": datetime.now(timezone.utc)}
 
     result = await session.execute(
         update(AgentConfig)
@@ -88,7 +88,7 @@ async def update_agent_call_count(
         .where(AgentConfig.agent_id == agent_id)
         .values(
             current_call_count=new_count,
-            updated_at=datetime.utcnow()
+            updated_at=datetime.now(timezone.utc)
         )
     )
 

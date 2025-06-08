@@ -8,7 +8,7 @@ from typing import Any
 from api.v1.schemas.request.call import CallInitiateRequest
 from api.v1.schemas.response.call import CallInitiateResponse, CallStatus
 from services.call.management.orchestrator import CallOrchestrator
-from core.config.app import ConfigurationManager
+from core.config.registry import config_registry
 from core.security.auth.token import get_current_user
 from core.logging.setup import get_logger
 
@@ -38,12 +38,8 @@ async def initiate_outbound_call(
     logger.info(
         f"Initiating outbound call to {request.phone_number} for user {current_user}")
 
-    # Load system configuration
-    config_manager = ConfigurationManager()
-    system_config = config_manager.get_configuration()
-
     # Initialize call orchestrator
-    call_orchestrator = CallOrchestrator(system_config)
+    call_orchestrator = CallOrchestrator()
 
     # Initiate outbound call
     session_id = await call_orchestrator.initiate_outbound_call(

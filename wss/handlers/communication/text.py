@@ -2,7 +2,7 @@
 WebSocket text message handlers.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from wss.connection import WebSocketConnection
@@ -67,7 +67,7 @@ class TextMessageHandler:
         response_text = getattr(response, 'text', str(response))
         await connection.send_message("agent_response", {
             "text": response_text,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
         # Generate and send audio response

@@ -5,7 +5,7 @@ import asyncio
 import os
 import json
 from typing import Dict, Any, Optional, List, Union
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from models.internal.callcontext import CallContext, CallDirection, CallStatus

@@ -3,7 +3,7 @@ Memory data models and structures.
 """
 from typing import Dict, Any, Optional, Set
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass

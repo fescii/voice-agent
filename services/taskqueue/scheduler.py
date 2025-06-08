@@ -1,7 +1,7 @@
 """Task scheduler for managing scheduled and recurring tasks."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Optional, List, Callable, Any
 from enum import Enum
 
@@ -99,7 +99,7 @@ class TaskScheduler:
         priority=priority,
         max_retries=max_retries,
         timeout_seconds=timeout_seconds,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
 
     self.scheduled_tasks[task_id] = scheduled_task
@@ -120,7 +120,8 @@ class TaskScheduler:
     """Schedule a recurring task."""
 
     if start_at is None:
-      start_at = datetime.utcnow() + timedelta(seconds=interval_seconds)
+      start_at = datetime.now(timezone.utc) + \
+          timedelta(seconds=interval_seconds)
 
     scheduled_task = ScheduledTask(
         id=task_id,
@@ -132,7 +133,7 @@ class TaskScheduler:
         priority=priority,
         max_retries=max_retries,
         timeout_seconds=timeout_seconds,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
 
     self.scheduled_tasks[task_id] = scheduled_task
@@ -166,7 +167,7 @@ class TaskScheduler:
         priority=priority,
         max_retries=max_retries,
         timeout_seconds=timeout_seconds,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
 
     self.scheduled_tasks[task_id] = scheduled_task
@@ -217,7 +218,7 @@ class TaskScheduler:
 
     while self.is_running:
       try:
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
 
         # Check for tasks that need to run
         for task_id, scheduled_task in self.scheduled_tasks.copy().items():
@@ -248,7 +249,7 @@ class TaskScheduler:
       )
 
       # Update task statistics
-      scheduled_task.last_run = datetime.utcnow()
+      scheduled_task.last_run = datetime.now(timezone.utc)
       scheduled_task.run_count += 1
 
       self.logger.info(f"Executed scheduled task {scheduled_task.id}")
@@ -271,7 +272,7 @@ class TaskScheduler:
     elif scheduled_task.schedule_type == ScheduleType.RECURRING:
       # Recurring task, calculate next run
       if scheduled_task.interval_seconds:
-        scheduled_task.next_run = datetime.utcnow() + timedelta(
+        scheduled_task.next_run = datetime.now(timezone.utc) + timedelta(
             seconds=scheduled_task.interval_seconds
         )
 
@@ -294,7 +295,7 @@ class TaskScheduler:
 
     # For now, just add 1 hour as a placeholder
     # In production, implement proper cron parsing
-    return datetime.utcnow() + timedelta(hours=1)
+    return datetime.now(timezone.utc) + timedelta(hours=1)
 
   async def get_scheduler_stats(self) -> Dict[str, Any]:
     """Get scheduler statistics."""

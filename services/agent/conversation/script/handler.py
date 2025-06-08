@@ -3,7 +3,7 @@ Script flow transition handlers for node/edge traversal.
 """
 from typing import Dict, Any, Optional, List
 import re
-from datetime import datetime, time
+from datetime import datetime, timezone, time
 
 from services.llm.script.schema import ScriptSchema, Edge, State, EdgeCondition
 

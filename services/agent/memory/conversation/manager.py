@@ -2,7 +2,7 @@
 Conversation-specific memory management.
 """
 from typing import Dict, Any, Optional, List, Set
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from core.logging.setup import get_logger
 from ..models.item import MemoryItem, ConversationMemory
 from ..storage.persistent import MemoryStorage

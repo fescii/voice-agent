@@ -5,8 +5,9 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Any, Dict, List, Optional
 
 from api.v1.schemas.response.call import CallStatus
-from services.call.management.orchestrator import CallOrchestrator, CallSession
-from core.config.app import ConfigurationManager
+from services.call.management.orchestrator import CallOrchestrator
+from services.call.management.session.models import CallSession
+from core.config.registry import config_registry
 from core.security.auth.token import get_current_user
 from core.logging.setup import get_logger
 
@@ -21,9 +22,10 @@ def get_orchestrator() -> CallOrchestrator:
   """Get or create call orchestrator instance."""
   global _orchestrator
   if _orchestrator is None:
-    config_manager = ConfigurationManager()
-    system_config = config_manager.get_configuration()
-    _orchestrator = CallOrchestrator(system_config)
+    # Ensure config registry is initialized before creating orchestrator
+    if not hasattr(config_registry, '_initialized') or not config_registry._initialized:
+      config_registry.initialize()
+    _orchestrator = CallOrchestrator()
   return _orchestrator
 
 
@@ -44,7 +46,7 @@ async def get_call_session_status(
   """
   try:
     orchestrator = get_orchestrator()
-    session = orchestrator.active_sessions.get(session_id)
+    session = await orchestrator.get_session_status(session_id)
 
     if not session:
       raise HTTPException(
@@ -55,10 +57,10 @@ async def get_call_session_status(
     # Build comprehensive status response
     return {
         "session_id": session_id,
-        "call_id": session.call_info.call_id,
+        "call_id": session.call_id,
         "agent_id": session.agent_id,
-        "phone_number": session.call_context.phone_number,
-        "direction": session.call_context.direction,
+        "phone_number": session.call_info.phone_number,
+        "priority": session.priority.value,
         "status": session.call_context.status,
         "priority": session.priority.name,
         "is_active": session.is_active,
@@ -102,17 +104,19 @@ async def list_active_sessions(
   try:
     orchestrator = get_orchestrator()
 
+    active_sessions = await orchestrator.get_active_sessions()
     sessions = []
-    for session_id, session in orchestrator.active_sessions.items():
+    
+    for session in active_sessions:
       sessions.append({
-          "session_id": session_id,
+          "session_id": session.call_context.session_id,
           "call_id": session.call_info.call_id,
           "agent_id": session.agent_id,
-          "phone_number": session.call_context.phone_number,
-          "direction": session.call_context.direction,
-          "status": session.call_context.status,
+          "phone_number": session.call_info.phone_number,
+          "direction": session.call_context.direction.value,
+          "status": session.call_context.status.value,
           "priority": session.priority.name,
-          "is_active": session.is_active,
+          "is_active": True,  # All returned sessions are active
           "created_at": session.created_at.isoformat(),
           "last_activity": session.last_activity.isoformat()
       })
@@ -145,19 +149,15 @@ async def end_call_session(
   try:
     orchestrator = get_orchestrator()
 
-    if session_id not in orchestrator.active_sessions:
+    # Check if session exists
+    session = await orchestrator.get_session_status(session_id)
+    if not session:
       raise HTTPException(
           status_code=status.HTTP_404_NOT_FOUND,
           detail="Call session not found"
       )
 
-    success = await orchestrator.end_call(session_id)
-
-    if not success:
-      raise HTTPException(
-          status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-          detail="Failed to end call session"
-      )
+    await orchestrator.end_call(session_id)
 
     return {
         "session_id": session_id,
@@ -191,20 +191,24 @@ async def get_agent_load_stats(
   try:
     orchestrator = get_orchestrator()
 
+    agent_cores = await orchestrator.get_agent_cores()
+    agent_loads = await orchestrator.get_agent_loads()
+    active_sessions = await orchestrator.get_active_sessions()
+    pending_calls = await orchestrator.get_pending_calls()
+
     stats = {
-        "total_agents": len(orchestrator.agent_cores),
-        "agent_loads": orchestrator.agent_loads,
-        "active_sessions_count": len(orchestrator.active_sessions),
-        "pending_calls_count": len(orchestrator.pending_calls),
+        "total_agents": len(agent_cores),
+        "agent_loads": agent_loads,
+        "active_sessions_count": len(active_sessions),
+        "pending_calls_count": len(pending_calls),
         "agents": []
     }
 
     # Get detailed agent information
-    for agent_id, agent_core in orchestrator.agent_cores.items():
-      current_load = orchestrator.agent_loads.get(agent_id, 0)
-      agent_config = next(
-          (a for a in orchestrator.system_config.agents if a.agent_id == agent_id), None)
-      max_concurrent = agent_config.max_concurrent_calls if agent_config else 0
+    for agent_id, agent_core in agent_cores.items():
+      current_load = agent_loads.get(agent_id, 0)
+      # TODO: Get agent config from centralized registry when agent system is migrated
+      max_concurrent = 0  # Default value until agent system is fully migrated
 
       stats["agents"].append({
           "agent_id": agent_id,
@@ -243,7 +247,7 @@ async def update_session_script(
   """
   try:
     orchestrator = get_orchestrator()
-    session = orchestrator.active_sessions.get(session_id)
+    session = await orchestrator.get_session_by_id(session_id)
 
     if not session:
       raise HTTPException(
@@ -256,7 +260,8 @@ async def update_session_script(
       session.script_name = script_name
 
       # Update the agent's script if possible
-      agent_core = orchestrator.agent_cores.get(session.agent_id)
+      agent_cores = await orchestrator.get_agent_cores()
+      agent_core = agent_cores.get(session.agent_id)
       if agent_core:
         # Use the new script update functionality
         try:

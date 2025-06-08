@@ -3,14 +3,14 @@
 import asyncio
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Callable, Union
 
 from pydantic import BaseModel
 import redis.asyncio as aioredis
 
-from core.config.providers.redis import RedisConfig
+from core.config.registry import config_registry
 from core.logging.setup import get_logger
 
 
@@ -55,9 +55,9 @@ class Task(BaseModel):
 class TaskQueue:
   """Redis-based task queue implementation."""
 
-  def __init__(self, redis_config: RedisConfig, queue_name: str = "default"):
+  def __init__(self, queue_name: str = "default"):
     self.logger = get_logger(__name__)
-    self.redis_config = redis_config
+    self.redis_config = config_registry.redis
     self.queue_name = queue_name
     self._redis_client: Optional[aioredis.Redis] = None
 
@@ -127,7 +127,7 @@ class TaskQueue:
         name=name,
         data=data,
         priority=priority,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         scheduled_at=scheduled_at,
         max_retries=max_retries,
         timeout_seconds=timeout_seconds
@@ -139,7 +139,7 @@ class TaskQueue:
     await self.redis_client.set(task_key, task.json(), ex=86400)
 
     # Add to appropriate queue
-    if scheduled_at and scheduled_at > datetime.utcnow():
+    if scheduled_at and scheduled_at > datetime.now(timezone.utc):
       # Scheduled task
       score = scheduled_at.timestamp()
       await self.redis_client.zadd(f"{self.pending_key}:scheduled", {task_id: score})
@@ -211,10 +211,10 @@ class TaskQueue:
 
     # Move to processing
     task.status = TaskStatus.PROCESSING
-    task.started_at = datetime.utcnow()
+    task.started_at = datetime.now(timezone.utc)
 
     await self.redis_client.set(task_key, task.json(), ex=86400)
-    await self.redis_client.zadd(self.processing_key, {task_id: datetime.utcnow().timestamp()})
+    await self.redis_client.zadd(self.processing_key, {task_id: datetime.now(timezone.utc).timestamp()})
 
     self.logger.info(f"Dequeued task {task_id}: {task.name}")
 
@@ -234,7 +234,7 @@ class TaskQueue:
 
     task = Task.parse_raw(task_data)
     task.status = TaskStatus.COMPLETED
-    task.completed_at = datetime.utcnow()
+    task.completed_at = datetime.now(timezone.utc)
     task.result = result
 
     # Update task data
@@ -242,7 +242,7 @@ class TaskQueue:
 
     # Move from processing to completed
     await self.redis_client.zrem(self.processing_key, task_id)
-    await self.redis_client.zadd(self.completed_key, {task_id: datetime.utcnow().timestamp()})
+    await self.redis_client.zadd(self.completed_key, {task_id: datetime.now(timezone.utc).timestamp()})
 
     self.logger.info(f"Completed task {task_id}")
 
@@ -281,7 +281,7 @@ class TaskQueue:
       # Mark as failed
       task.status = TaskStatus.FAILED
       await self.redis_client.set(task_key, task.json(), ex=86400)
-      await self.redis_client.zadd(self.failed_key, {task_id: datetime.utcnow().timestamp()})
+      await self.redis_client.zadd(self.failed_key, {task_id: datetime.now(timezone.utc).timestamp()})
 
       self.logger.error(
           f"Failed task {task_id} after {task.retry_count} attempts")
@@ -290,7 +290,7 @@ class TaskQueue:
   async def _process_scheduled_tasks(self) -> None:
     """Move ready scheduled tasks to pending queue."""
 
-    current_time = datetime.utcnow().timestamp()
+    current_time = datetime.now(timezone.utc).timestamp()
     scheduled_key = f"{self.pending_key}:scheduled"
 
     # Get tasks ready to run
@@ -316,7 +316,8 @@ class TaskQueue:
     if not self._redis_client:
       await self.connect()
 
-    cutoff_time = (datetime.utcnow() - timedelta(days=days)).timestamp()
+    cutoff_time = (datetime.now(timezone.utc) -
+                   timedelta(days=days)).timestamp()
 
     # Clean completed tasks
     completed_cleaned = await self.redis_client.zremrangebyscore(

@@ -2,7 +2,7 @@
 Memory consolidation operations.
 """
 from typing import Dict, List, Tuple, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from core.logging.setup import get_logger
 from ..models.item import ConversationMemory, MemoryItem
 

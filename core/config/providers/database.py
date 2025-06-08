@@ -1,5 +1,7 @@
 """
-Database configuration settings
+Database configura  class Config:
+    env_file = ".env"
+    env_prefix = "DB_"s
 """
 import os
 from pydantic import BaseModel

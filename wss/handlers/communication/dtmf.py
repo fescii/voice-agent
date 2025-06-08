@@ -2,7 +2,7 @@
 WebSocket DTMF tone handlers.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from wss.connection import WebSocketConnection
@@ -47,7 +47,7 @@ class DTMFHandler:
         await connection.send_message("dtmf_sent", {
             "call_id": connection.call_context.call_id,
             "tone": tone,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
       else:
         await connection.send_message("error", {
