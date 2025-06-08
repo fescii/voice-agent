@@ -327,3 +327,49 @@ class CallEventProcessor:
         Call state dictionary or None if not found
     """
     return self.call_states.get(call_id)
+
+
+class RingoverWebhookConfig:
+  """Helper class for Ringover webhook configuration"""
+
+  def __init__(self):
+    from core.config.app import ConfigurationManager
+    config_manager = ConfigurationManager()
+    self.config = config_manager.get_configuration()
+    self.base_url = getattr(self.config.telephony_config,
+                            'webhook_url', '')
+
+  def get_webhook_endpoint(self) -> str:
+    """Get the main webhook endpoint URL"""
+    return f"{self.base_url}/api/v1/webhooks/ringover/event"
+
+  def get_webhook_secret(self) -> str:
+    """Get the webhook secret for verification"""
+    return getattr(self.config.telephony_config, 'webhook_secret', '')
+
+  def get_supported_events(self) -> list[str]:
+    """Get list of supported webhook event types"""
+    return [
+        "call_ringing",
+        "call_answered",
+        "call_ended",
+        "missed_call",
+        "voicemail",
+        "sms_received",
+        "sms_sent",
+        "after_call_work",
+        "fax_received"
+    ]
+
+  def print_configuration_summary(self) -> None:
+    """Print webhook configuration summary for setup"""
+    print("=== Ringover Webhook Configuration ===")
+    print(f"Webhook Endpoint: {self.get_webhook_endpoint()}")
+    print(f"Webhook Secret: {self.get_webhook_secret()}")
+    print("\nSupported Events:")
+    for event in self.get_supported_events():
+      print(f"  - {event}")
+    print("\nConfiguration Status:")
+    print(
+        f"  Base URL configured: {'✓' if self.base_url else '✗'}")
+    print(f"  Secret configured: {'✓' if self.get_webhook_secret() else '✗'}")

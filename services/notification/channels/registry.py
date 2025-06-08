@@ -6,7 +6,7 @@ The actual implementations have been modularized into channels/implementations/.
 """
 
 # Import all channel classes from the modularized implementations
-from .channels.implementations import (
+from .implementations import (
     EmailChannel,
     WebhookChannel,
     SlackChannel,

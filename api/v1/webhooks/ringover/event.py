@@ -128,7 +128,7 @@ def _verify_webhook_signature(body: bytes, signature: Optional[str], secret: str
 
 async def _route_webhook_event(event: RingoverWebhookEvent) -> None:
   """
-  Route webhook event to call orchestrator for handling
+  Route webhook event to appropriate handler based on event type
 
   Args:
       event: Parsed webhook event
@@ -138,35 +138,68 @@ async def _route_webhook_event(event: RingoverWebhookEvent) -> None:
   logger.info(
       f"Routing webhook event: {event.event_type} for call {event.call_id}")
 
-  if event.event_type == "call_initiated":
-    # Handle outbound call initiated
-    logger.info(f"Call {event.call_id} initiated")
+  # Call-related events
+  if event.event_type in ["call_ringing", "call_initiated"]:
+    await _handle_call_ringing(event, orchestrator)
 
   elif event.event_type == "call_answered":
-    # Update call status and handle answer
-    logger.info(f"Call {event.call_id} answered")
+    await _handle_call_answered(event, orchestrator)
 
   elif event.event_type == "call_ended":
-    # End call session
-    session_ids = [sid for sid, session in orchestrator.active_sessions.items()
-                   if session.call_info.call_id == event.call_id]
-    for session_id in session_ids:
-      await orchestrator.end_call(session_id)
-    logger.info(f"Call {event.call_id} ended")
+    await _handle_call_ended(event, orchestrator)
 
-  elif event.event_type == "call_failed":
-    # Handle call failure
-    session_ids = [sid for sid, session in orchestrator.active_sessions.items()
-                   if session.call_info.call_id == event.call_id]
-    for session_id in session_ids:
-      await orchestrator.end_call(session_id)
-    logger.warning(f"Call {event.call_id} failed")
+  elif event.event_type in ["call_failed", "missed_call"]:
+    await _handle_call_failed_or_missed(event, orchestrator)
 
   elif event.event_type == "incoming_call":
-    # Handle incoming call - try to extract call details from event data
+    await _handle_incoming_call(event, orchestrator)
+
+  # Voicemail events
+  elif event.event_type == "voicemail":
+    await _handle_voicemail(event)
+
+  # SMS events
+  elif event.event_type == "sms_received":
+    await _handle_sms_received(event)
+
+  elif event.event_type == "sms_sent":
+    await _handle_sms_sent(event)
+
+  # After-call work events
+  elif event.event_type == "after_call_work":
+    await _handle_after_call_work(event)
+
+  # Fax events
+  elif event.event_type == "fax_received":
+    await _handle_fax_received(event)
+
+  # WebSocket events (for audio streaming)
+  elif event.event_type == "websocket_connected":
+    await _handle_websocket_connected(event, orchestrator)
+
+  elif event.event_type == "websocket_disconnected":
+    await _handle_websocket_disconnected(event, orchestrator)
+
+  else:
+    logger.warning(f"Unhandled webhook event type: {event.event_type}")
+
+
+async def _handle_call_ringing(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
+  """Handle call ringing event"""
+  if not event.call_id:
+    logger.warning("Received call ringing event without call_id")
+    return
+
+  logger.info(f"Call {event.call_id} is ringing")
+  # Extract call details from event data
+  from_number = event.data.get("from_number", "unknown")
+  to_number = event.data.get("to_number", "unknown")
+  direction = event.data.get("direction", "unknown")
+
+  if direction == "inbound":
     call_info = CallInfo(
         call_id=event.call_id,
-        phone_number=event.data.get("caller_number", "unknown"),
+        phone_number=from_number,
         direction=CallDirection.INBOUND,
         status=CallStatus.RINGING,
         metadata=event.data
@@ -174,8 +207,104 @@ async def _route_webhook_event(event: RingoverWebhookEvent) -> None:
     session_id = await orchestrator.handle_inbound_call(call_info)
     if session_id:
       logger.info(f"Incoming call handled, session: {session_id}")
-    else:
-      logger.warning(f"Failed to handle incoming call {event.call_id}")
 
+
+async def _handle_call_answered(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
+  """Handle call answered event"""
+  logger.info(f"Call {event.call_id} answered")
+  # Update call status in active sessions
+  for session_id, session in orchestrator.active_sessions.items():
+    if session.call_info.call_id == event.call_id:
+      session.call_info.status = CallStatus.ANSWERED
+      logger.info(f"Updated call status to answered for session {session_id}")
+
+
+async def _handle_call_ended(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
+  """Handle call ended event"""
+  session_ids = [sid for sid, session in orchestrator.active_sessions.items()
+                 if session.call_info.call_id == event.call_id]
+  for session_id in session_ids:
+    await orchestrator.end_call(session_id)
+  logger.info(f"Call {event.call_id} ended")
+
+
+async def _handle_call_failed_or_missed(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
+  """Handle call failure or missed call event"""
+  session_ids = [sid for sid, session in orchestrator.active_sessions.items()
+                 if session.call_info.call_id == event.call_id]
+  for session_id in session_ids:
+    await orchestrator.end_call(session_id)
+  logger.warning(f"Call {event.call_id} failed or missed: {event.event_type}")
+
+
+async def _handle_incoming_call(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
+  """Handle incoming call event"""
+  if not event.call_id:
+    logger.warning("Received incoming call event without call_id")
+    return
+
+  call_info = CallInfo(
+      call_id=event.call_id,
+      phone_number=event.data.get("caller_number", "unknown"),
+      direction=CallDirection.INBOUND,
+      status=CallStatus.RINGING,
+      metadata=event.data
+  )
+  session_id = await orchestrator.handle_inbound_call(call_info)
+  if session_id:
+    logger.info(f"Incoming call handled, session: {session_id}")
   else:
-    logger.warning(f"Unhandled webhook event type: {event.event_type}")
+    logger.warning(f"Failed to handle incoming call {event.call_id}")
+
+
+async def _handle_voicemail(event: RingoverWebhookEvent) -> None:
+  """Handle voicemail event"""
+  logger.info(
+      f"Voicemail received from {event.data.get('caller_number', 'unknown')}")
+  # TODO: Implement voicemail processing logic
+  # Could involve transcription, notification, storage, etc.
+
+
+async def _handle_sms_received(event: RingoverWebhookEvent) -> None:
+  """Handle SMS received event"""
+  from_number = event.data.get('from_number', 'unknown')
+  message_content = event.data.get('message_content', '')
+  logger.info(f"SMS received from {from_number}: {message_content[:50]}...")
+  # TODO: Implement SMS processing logic
+  # Could involve auto-responses, logging, integration with chat systems, etc.
+
+
+async def _handle_sms_sent(event: RingoverWebhookEvent) -> None:
+  """Handle SMS sent event"""
+  to_number = event.data.get('to_number', 'unknown')
+  logger.info(f"SMS sent to {to_number}")
+  # TODO: Implement SMS sent tracking
+  # Could involve delivery confirmation, logging, etc.
+
+
+async def _handle_after_call_work(event: RingoverWebhookEvent) -> None:
+  """Handle after-call work event"""
+  agent_id = event.data.get('agent_id', 'unknown')
+  logger.info(f"After-call work event for agent {agent_id}")
+  # TODO: Implement after-call work processing
+  # Could involve call summary generation, CRM updates, etc.
+
+
+async def _handle_fax_received(event: RingoverWebhookEvent) -> None:
+  """Handle fax received event"""
+  from_number = event.data.get('from_number', 'unknown')
+  logger.info(f"Fax received from {from_number}")
+  # TODO: Implement fax processing logic
+  # Could involve OCR, document processing, notifications, etc.
+
+
+async def _handle_websocket_connected(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
+  """Handle WebSocket audio connection established"""
+  logger.info(f"WebSocket connected for call {event.call_id}")
+  # TODO: Set up audio streaming handlers
+
+
+async def _handle_websocket_disconnected(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
+  """Handle WebSocket audio connection disconnected"""
+  logger.info(f"WebSocket disconnected for call {event.call_id}")
+  # TODO: Clean up audio streaming handlers
