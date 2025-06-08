@@ -127,9 +127,9 @@ class CallOrchestrator:
     agent_cores = {}
     for agent_id in agent_loads.keys():
       agent_cores[agent_id] = {
-        'id': agent_id,
-        'status': 'active',
-        'current_load': agent_loads.get(agent_id, 0)
+          'id': agent_id,
+          'status': 'active',
+          'current_load': agent_loads.get(agent_id, 0)
       }
     return agent_cores
 

@@ -73,7 +73,7 @@ class SessionManager:
     if session:
       session.is_active = False
       session.call_context.end_time = datetime.now()
-      session.call_context.status = CallStatus.COMPLETED
+      session.call_context.status = CallStatus.ENDED
 
       # Calculate duration
       if session.call_context.start_time:

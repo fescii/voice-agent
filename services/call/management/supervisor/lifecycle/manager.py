@@ -111,3 +111,44 @@ class CallLifecycleManager:
   def get_call_count(self) -> int:
     """Get count of active calls."""
     return len(self.active_calls)
+
+  async def cleanup_inactive_calls(self) -> int:
+    """
+    Clean up inactive calls (calls that have been inactive for too long).
+
+    Returns:
+        Number of calls cleaned up
+    """
+    try:
+      current_time = datetime.now(timezone.utc)
+      cleanup_count = 0
+      calls_to_remove = []
+
+      # Find calls that need cleanup
+      for call_id, call_context in self.active_calls.items():
+        # Define criteria for inactive calls
+        # Example: calls that started more than 2 hours ago without proper end
+        if (call_context.start_time and
+                (current_time - call_context.start_time).total_seconds() > 7200):  # 2 hours
+          calls_to_remove.append(call_id)
+        # Or calls with status ended but still in active calls
+        elif call_context.status == CallStatus.ENDED:
+          calls_to_remove.append(call_id)
+
+      # Remove inactive calls
+      for call_id in calls_to_remove:
+        try:
+          await self.end_call(call_id)
+          cleanup_count += 1
+          logger.info(f"Cleaned up inactive call: {call_id}")
+        except Exception as e:
+          logger.error(f"Failed to cleanup call {call_id}: {e}")
+
+      if cleanup_count > 0:
+        logger.info(f"Cleaned up {cleanup_count} inactive calls")
+
+      return cleanup_count
+
+    except Exception as e:
+      logger.error(f"Failed to cleanup inactive calls: {e}")
+      return 0

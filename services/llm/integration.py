@@ -5,16 +5,17 @@ from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import asyncio
 
 from core.logging.setup import get_logger
-from services.agent.core import AgentCore, AgentResponse
+
+if TYPE_CHECKING:
+  from services.agent.core import AgentCore, AgentResponse
+  from services.ringover.streaming import RingoverStreamHandler
+
 from services.llm.prompt import (
     PromptManager, PromptBuilder, ConversationContext, PromptLLMAdapter
 )
 from services.llm.orchestrator import LLMOrchestrator
 from services.tts.elevenlabs import ElevenLabsService
 from models.internal.callcontext import CallContext
-
-if TYPE_CHECKING:
-  from services.ringover.streaming import RingoverStreamHandler
 
 logger = get_logger(__name__)
 
@@ -29,7 +30,7 @@ class VoiceAgentLLMIntegration:
 
   def __init__(
       self,
-      agent_core: AgentCore,
+      agent_core: "AgentCore",
       llm_orchestrator: LLMOrchestrator,
       prompt_manager: PromptManager,
       tts_service: Optional[ElevenLabsService] = None,
@@ -101,7 +102,7 @@ class VoiceAgentLLMIntegration:
       user_input: str,
       audio_data: Optional[bytes] = None,
       metadata: Optional[Dict[str, Any]] = None
-  ) -> AgentResponse:
+  ) -> "AgentResponse":
     """
     Process user input to generate a response.
 
@@ -113,6 +114,9 @@ class VoiceAgentLLMIntegration:
     Returns:
         Agent response
     """
+    # Runtime import to avoid circular dependency
+    from services.agent.core import AgentResponse
+
     if not self.current_context:
       raise ValueError("Call not initialized. Call initialize_call first.")
 
@@ -179,13 +183,16 @@ class VoiceAgentLLMIntegration:
 
     await self.stream_handler.handle_audio_chunk(audio_chunk, metadata or {})
 
-  async def end_streaming_utterance(self) -> Optional[AgentResponse]:
+  async def end_streaming_utterance(self) -> Optional["AgentResponse"]:
     """
     End the current utterance and generate a response.
 
     Returns:
         Agent response if transcription was successful
     """
+    # Runtime import to avoid circular dependency
+    from services.agent.core import AgentResponse
+
     if not self.stream_handler:
       return None
 

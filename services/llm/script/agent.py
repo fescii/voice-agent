@@ -1,7 +1,7 @@
 """
 Manager for handling voice agent script operations.
 """
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import json
 from pathlib import Path
 
@@ -9,10 +9,12 @@ from core.logging.setup import get_logger
 from services.llm.prompt.manager import PromptManager
 from services.llm.script.manager import ScriptManager
 from services.llm.script.api import ScriptAPI
-from services.agent.core import AgentCore
 from models.internal.callcontext import CallContext
 from services.llm.prompt.adapter import PromptLLMAdapter
 from services.llm.prompt.builder import ConversationContext
+
+if TYPE_CHECKING:
+  from services.agent.core import AgentCore
 
 logger = get_logger(__name__)
 
@@ -27,7 +29,7 @@ class VoiceAgentScriptManager:
   """
 
   def __init__(self,
-               agent_core: AgentCore,
+               agent_core: "AgentCore",
                prompt_manager: PromptManager,
                llm_adapter: PromptLLMAdapter):
     """

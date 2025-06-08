@@ -38,14 +38,15 @@ async def initiate_outbound_call(
     logger.info(
         f"Initiating outbound call to {request.phone_number} for user {current_user}")
 
-    # Initialize call orchestrator
+    # Initialize call orchestrator with config check
+    if not hasattr(config_registry, '_initialized') or not config_registry._initialized:
+      config_registry.initialize()
     call_orchestrator = CallOrchestrator()
 
     # Initiate outbound call
-    session_id = await call_orchestrator.initiate_outbound_call(
-        to_number=request.phone_number,
-        agent_id=request.agent_id,
-        metadata=request.context or {}
+    session_id = await call_orchestrator.handle_outbound_call(
+        phone_number=request.phone_number,
+        agent_id=request.agent_id
     )
 
     if not session_id:

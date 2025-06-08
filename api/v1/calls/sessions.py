@@ -106,7 +106,7 @@ async def list_active_sessions(
 
     active_sessions = await orchestrator.get_active_sessions()
     sessions = []
-    
+
     for session in active_sessions:
       sessions.append({
           "session_id": session.call_context.session_id,

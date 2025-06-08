@@ -214,7 +214,8 @@ async def _handle_call_answered(event: RingoverWebhookEvent, orchestrator: CallO
   for session in active_sessions:
     if session.call_info.call_id == event.call_id:
       session.call_info.status = CallStatus.ANSWERED
-      logger.info(f"Updated call status to answered for session {session.call_context.session_id}")
+      logger.info(
+          f"Updated call status to answered for session {session.call_context.session_id}")
 
 
 async def _handle_call_ended(event: RingoverWebhookEvent, orchestrator: CallOrchestrator) -> None:
