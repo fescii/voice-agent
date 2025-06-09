@@ -119,44 +119,50 @@ voice/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd voice
    ```
 
 2. **Create virtual environment**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration values
    ```
 
 5. **Initialize database**
+
    ```bash
    # Set up PostgreSQL database
    python -c "from data.db.connection import create_tables; import asyncio; asyncio.run(create_tables())"
    ```
 
 6. **Run the application**
+
    ```bash
    python main.py
    ```
 
 The system will start with:
 
-- **API Server**: http://localhost:8000
+- **API Server**: <http://localhost:8000>
 - **WebSocket Server**: ws://localhost:8080
-- **Admin Dashboard**: http://localhost:8000/docs
+- **Admin Dashboard**: <http://localhost:8000/docs>
 
 ## ⚙️ Configuration
 
@@ -165,6 +171,7 @@ The system will start with:
 Copy `.env.example` to `.env` and configure the following key sections:
 
 #### 📞 **Telephony (Ringover)**
+
 ```env
 RINGOVER_API_KEY=your_api_key
 RINGOVER_WEBHOOK_SECRET=your_webhook_secret
@@ -172,6 +179,7 @@ RINGOVER_DEFAULT_CALLER_ID=+1234567890
 ```
 
 #### 🤖 **AI Services**
+
 ```env
 # OpenAI
 OPENAI_API_KEY=sk-your_openai_key
@@ -186,6 +194,7 @@ WHISPER_API_KEY=sk-your_openai_key
 ```
 
 #### 🗄️ **Database**
+
 ```env
 DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/voice_agents
 REDIS_URL=redis://localhost:6379
@@ -407,6 +416,16 @@ curl http://localhost:8000/api/v1/calls/system/info
 
 ## 📚 Documentation
 
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[Documentation Index](docs/index.md)** - Complete navigation guide
+- **[Services](docs/services/)** - Service-specific documentation
+- **[Integration](docs/integration/)** - Integration guides and architecture
+- **[Testing](docs/testing/)** - Test organization and guidelines
+- **[Technical References](docs/)** - LLM, database, and external service docs
+
+All documentation follows strict naming conventions and is organized by category for easy navigation.
+
 - [API Documentation](http://localhost:8000/docs) - Interactive Swagger UI
 - [PostgreSQL Integration](docs/postgres.md) - Database setup and usage
 - [LLM Integration](docs/llm.md) - Language model configuration
@@ -417,6 +436,7 @@ curl http://localhost:8000/api/v1/calls/system/info
 ### Common Issues
 
 1. **Database Connection Failed**
+
    ```bash
    # Check PostgreSQL is running
    sudo systemctl status postgresql
@@ -426,6 +446,7 @@ curl http://localhost:8000/api/v1/calls/system/info
    ```
 
 2. **Ringover API Errors**
+
    ```bash
    # Verify API key and permissions
    curl -H "Authorization: Bearer $RINGOVER_API_KEY" \
@@ -445,6 +466,7 @@ curl http://localhost:8000/api/v1/calls/system/info
 ### Debug Mode
 
 Enable detailed logging:
+
 ```bash
 export LOG_LEVEL=DEBUG
 export APP_DEBUG=true

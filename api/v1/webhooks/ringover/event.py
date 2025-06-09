@@ -1,5 +1,5 @@
 """
-Handles incoming Ringover webhook events
+Handles incoming Ringover webhook events with enhanced orchestration.
 """
 from fastapi import APIRouter, Request, HTTPException, status, Header
 from typing import Optional
@@ -8,6 +8,9 @@ import hashlib
 
 from models.external.ringover.webhook import RingoverWebhookEvent
 from services.call.management.orchestrator import CallOrchestrator
+from services.ringover.webhooks.orchestrator import RingoverWebhookOrchestrator
+from services.ringover.webhooks.security import WebhookSecurity
+from services.ringover.streaming.integration import RingoverStreamerIntegration
 from services.ringover import CallInfo, CallDirection, CallStatus
 from core.config.registry import config_registry
 from core.logging.setup import get_logger
@@ -15,8 +18,11 @@ from core.logging.setup import get_logger
 logger = get_logger(__name__)
 router = APIRouter()
 
-# Global orchestrator instance
+# Global orchestrator instances
 _orchestrator: Optional[CallOrchestrator] = None
+_webhook_orchestrator: Optional[RingoverWebhookOrchestrator] = None
+_webhook_security = WebhookSecurity()
+_streamer_integration: Optional[RingoverStreamerIntegration] = None
 
 
 def get_orchestrator() -> CallOrchestrator:
@@ -28,6 +34,25 @@ def get_orchestrator() -> CallOrchestrator:
       config_registry.initialize()
     _orchestrator = CallOrchestrator()
   return _orchestrator
+
+
+def get_webhook_orchestrator() -> RingoverWebhookOrchestrator:
+  """Get or create webhook orchestrator instance."""
+  global _webhook_orchestrator, _streamer_integration
+  if _webhook_orchestrator is None:
+    _webhook_orchestrator = RingoverWebhookOrchestrator()
+
+    # Set up call orchestrator
+    call_orchestrator = get_orchestrator()
+    _webhook_orchestrator.set_call_orchestrator(call_orchestrator)
+
+    # Initialize streamer integration if not already done
+    if _streamer_integration is None:
+      _streamer_integration = RingoverStreamerIntegration()
+
+    _webhook_orchestrator.set_streamer_integration(_streamer_integration)
+
+  return _webhook_orchestrator
 
 
 @router.post("/event")
@@ -52,11 +77,8 @@ async def handle_ringover_event(
     # Get raw body for signature verification
     body = await request.body()
 
-    # Get system configuration for webhook verification
-    webhook_secret = config_registry.ringover.webhook_secret
-
-    # Verify webhook signature if secret is configured
-    if webhook_secret and not _verify_webhook_signature(body, x_ringover_signature, webhook_secret):
+    # Verify webhook signature using security service
+    if not _webhook_security.verify_signature(body, x_ringover_signature):
       logger.warning("Invalid webhook signature received")
       raise HTTPException(
           status_code=status.HTTP_401_UNAUTHORIZED,
@@ -70,8 +92,9 @@ async def handle_ringover_event(
     logger.info(
         f"Received Ringover webhook event: {webhook_event.event_type} for call {webhook_event.call_id}")
 
-    # Route event to appropriate handler
-    await _route_webhook_event(webhook_event)
+    # Use enhanced webhook orchestrator for event handling
+    webhook_orchestrator = get_webhook_orchestrator()
+    await webhook_orchestrator.handle_webhook_event(webhook_event)
 
     logger.info(
         f"Successfully processed webhook event: {webhook_event.event_type}")

@@ -2,9 +2,9 @@
 Simplified call orchestrator using modular components.
 """
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from core.logging.setup import get_logger
-from services.ringover import CallInfo
+from services.ringover.api import CallInfo
 from .session.manager import SessionManager
 from .assignment.manager import AgentAssignmentManager
 from .coordination.manager import CallCoordinationManager

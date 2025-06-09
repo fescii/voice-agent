@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from datetime import datetime, timezone
 from models.internal.callcontext import CallContext
-from services.ringover import CallInfo
+from services.ringover.api import CallInfo
 
 
 class CallPriority(Enum):
