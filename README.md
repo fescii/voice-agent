@@ -94,16 +94,16 @@ The application will start on `http://0.0.0.0:8001` with all services initialize
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    FastAPI Application                     │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │   Ringover  │ │  WebSocket  │ │    AI Services      │   │
-│  │  Streaming  │ │ Orchestrator│ │  LLM/STT/TTS/Audio  │   │
-│  │ (Integrated)│ │             │ │                     │   │
-│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │ API Routes  │ │   Config    │ │    Data Layer       │   │
-│  │   /api/v1   │ │  Registry   │ │ PostgreSQL + Redis  │   │
-│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+│                    FastAPI Application                      │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐    │
+│  │   Ringover  │ │  WebSocket  │ │    AI Services      │    │
+│  │  Streaming  │ │ Orchestrator│ │  LLM/STT/TTS/Audio  │    │
+│  │ (Integrated)│ │             │ │                     │    │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘    │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐    │
+│  │ API Routes  │ │   Config    │ │    Data Layer       │    │
+│  │   /api/v1   │ │  Registry   │ │ PostgreSQL + Redis  │    │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
