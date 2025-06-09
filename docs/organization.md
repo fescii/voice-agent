@@ -26,8 +26,10 @@ docs/
 │       └── setup.md                 # Ringover setup guide
 ├── testing/                         # Testing documentation
 │   └── organization.md              # Test organization (was TEST_ORGANIZATION_SUMMARY.md)
-├── external/                        # External service docs
-│   └── streamer.md                  # External streamer docs (was external/ringover-streamer/README.md)
+├── services/                        # Service-specific documentation
+│   └── ringover/
+│       └── streaming/
+│           └── integration.md       # Integrated Ringover streaming service
 ├── llm/                            # Language model documentation
 │   ├── overview.md                  # LLM overview (was llm.md)
 │   └── gemini.md                    # Gemini integration (was gemini.md)

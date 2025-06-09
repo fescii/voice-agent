@@ -25,9 +25,9 @@ This directory contains all project documentation organized by category followin
 
 - [Organization](testing/organization.md) - Test structure and organization guide
 
-## External Services
+## Services
 
-- [Streamer](external/streamer.md) - External ringover-streamer service documentation
+- [Ringover Integration](services/ringover/streaming/integration.md) - Integrated Ringover streaming service
 
 ## Technical References
 
