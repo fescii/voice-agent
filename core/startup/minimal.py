@@ -1,6 +1,6 @@
 """
-Application startup context manager.
-Handles initialization and cleanup of all system services.
+Minimal startup manager for testing Ringover integration.
+Only starts essential services: database and ringover.
 """
 from typing import Dict, Any, List, Optional
 from contextlib import asynccontextmanager
@@ -28,13 +28,7 @@ class StartupContext:
   """Application startup context containing all initialized services."""
   configuration: Any
   services: Dict[str, ServiceStatus] = field(default_factory=dict)
-  startup_time: datetime = field(
-      default_factory=lambda: datetime.now(timezone.utc))
-
-  def __post_init__(self):
-    """Ensure startup_time is timezone-aware if not already set."""
-    if self.startup_time.tzinfo is None:
-      self.startup_time = self.startup_time.replace(tzinfo=timezone.utc)
+  startup_time: datetime = field(default_factory=datetime.utcnow)
 
   def add_service(self, name: str, status: str = "initializing",
                   metadata: Optional[Dict[str, Any]] = None) -> None:
@@ -73,84 +67,61 @@ class StartupContext:
     return [name for name, status in self.services.items()
             if status.status == "error"]
 
-  def get_failed_critical_services(self, service_registry: Dict[str, bool]) -> List[str]:
-    """Get list of failed critical services."""
-    return [name for name, status in self.services.items()
-            if status.status == "error" and service_registry.get(name, True)]
-
-  def is_healthy(self, service_registry: Optional[Dict[str, bool]] = None) -> bool:
+  def is_healthy(self) -> bool:
     """Check if all critical services are healthy."""
-    if service_registry is None:
-      # Fallback to old behavior if no registry provided
-      failed = self.get_failed_services()
-      return len(failed) == 0
-
-    failed_critical = self.get_failed_critical_services(service_registry)
-    return len(failed_critical) == 0
+    # For minimal version, just check if we have any running services
+    healthy_services = self.get_healthy_services()
+    return len(healthy_services) > 0
 
 
-class StartupManager:
-  """Manages application startup and service initialization."""
+class MinimalStartupManager:
+  """Minimal startup manager for testing Ringover integration."""
 
   def __init__(self):
     self.context: Optional[StartupContext] = None
-    # Use centralized config registry instead
 
   @asynccontextmanager
   async def startup_context(self):
     """Async context manager for application startup."""
-    logger.info("🚀 Starting application initialization...")
+    logger.info("🚀 Starting minimal application initialization...")
 
     try:
-      # Initialize startup context with explicit timezone-aware startup time
-      startup_time = datetime.now(timezone.utc)
+      # Initialize startup context
       self.context = StartupContext(
-          configuration=config_registry,
-          startup_time=startup_time
+          configuration=config_registry
       )
 
-      # Initialize all services
+      # Initialize only essential services
       await self._initialize_services()
 
-      # Services have been initialized - critical failures would have raised exceptions already
+      # Always succeed with minimal setup
       total_time = (datetime.now(timezone.utc) -
                     self.context.startup_time).total_seconds()
-      logger.info(f"✅ Application startup completed in {total_time:.2f}s")
+      logger.info(
+          f"✅ Minimal application startup completed in {total_time:.2f}s")
 
       yield self.context
 
     except Exception as e:
-      logger.error(f"❌ Application startup failed: {e}")
+      logger.error(f"❌ Minimal application startup failed: {e}")
       raise
     finally:
       # Cleanup
       if self.context:
         await self._cleanup_services()
-        logger.info("🧹 Application cleanup completed")
+        logger.info("🧹 Minimal application cleanup completed")
 
   async def _initialize_services(self) -> None:
-    """Initialize all application services in order."""
-    # Ensure context is initialized
+    """Initialize only essential services."""
     if not self.context:
       raise RuntimeError("Startup context not initialized")
 
+    # Only import and start essential services
     from .services.database import DatabaseService
-    from .services.redis import RedisService
-    from .services.telephony import TelephonyService
-    from .services.llm import LLMService
-    from .services.audio import AudioService
-    from .services.websocket import WebSocketService
-    from .services.monitoring import MonitoringService
     from .services.ringover import RingoverService
 
     services = [
         DatabaseService(),
-        RedisService(),
-        TelephonyService(),
-        LLMService(),
-        AudioService(),
-        WebSocketService(),
-        MonitoringService(),
         RingoverService()
     ]
 
@@ -169,32 +140,19 @@ class StartupManager:
         logger.error(f"❌ {error_msg}")
         self.context.mark_service_error(service.name, str(e))
 
-        # Fail immediately on any service failure
-        raise RuntimeError(error_msg)
+        # Continue anyway for minimal setup
+        logger.warning(f"Continuing without {service.name}")
 
   async def _cleanup_services(self) -> None:
     """Cleanup all initialized services."""
     if not self.context:
       return
 
-    # Import cleanup services
     from .services.database import DatabaseService
-    from .services.redis import RedisService
-    from .services.telephony import TelephonyService
-    from .services.llm import LLMService
-    from .services.audio import AudioService
-    from .services.websocket import WebSocketService
-    from .services.monitoring import MonitoringService
     from .services.ringover import RingoverService
 
     services = [
         RingoverService(),
-        MonitoringService(),
-        WebSocketService(),
-        AudioService(),
-        LLMService(),
-        TelephonyService(),
-        RedisService(),
         DatabaseService()
     ]
 

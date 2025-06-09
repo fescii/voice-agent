@@ -2,6 +2,7 @@
 Monitoring service startup initialization.
 Handles system monitoring, metrics, and health checks.
 """
+import os
 from typing import Dict, Any
 
 from .base import BaseStartupService
@@ -14,13 +15,17 @@ class MonitoringService(BaseStartupService):
   """Monitoring service startup handler."""
 
   def __init__(self):
-    super().__init__("monitoring", is_critical=False)
+    super().__init__("monitoring", is_critical=True)
 
   async def initialize(self, context) -> Dict[str, Any]:
     """Initialize monitoring services."""
     try:
       # Get monitoring configuration
-      monitoring_config = context.configuration.get("monitoring", {})
+      # Get monitoring configuration from environment or use defaults
+      monitoring_config = {
+          "enabled": os.getenv("MONITORING_ENABLED", "true").lower() == "true",
+          "metrics_port": int(os.getenv("METRICS_PORT", "9090")),
+      }
 
       # Initialize basic health metrics
       health_metrics = {

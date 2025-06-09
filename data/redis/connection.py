@@ -37,27 +37,25 @@ async def connect_redis() -> None:
   try:
     config = config_registry.redis
 
+    # Create async Redis connection for Docker container
     _redis_client = redis.Redis(
         host=config.host,
         port=config.port,
-        password=config.password,
+        password=config.password if config.password else None,
         db=config.db,
         decode_responses=True,
-        health_check_interval=30,
-        socket_keepalive=True,
-        socket_keepalive_options={
-            1: 1,  # TCP_KEEPIDLE
-            2: 3,  # TCP_KEEPINTVL
-            3: 5,  # TCP_KEEPCNT
-        }
+        socket_connect_timeout=5,
+        socket_timeout=5,
+        retry_on_timeout=True
     )
 
     # Test connection
     await _redis_client.ping()
-    logger.info("Redis connection established")
+    logger.info(f"Redis connection established to {config.host}:{config.port}")
 
   except Exception as e:
     logger.error(f"Failed to connect to Redis: {e}")
+    _redis_client = None
     raise
 
 
@@ -66,6 +64,6 @@ async def close_redis() -> None:
   global _redis_client
 
   if _redis_client:
-    await _redis_client.close()
+    await _redis_client.aclose()  # Use aclose() for async Redis client
     _redis_client = None
     logger.info("Redis connection closed")

@@ -160,69 +160,69 @@ class RingoverStreamerStartup(BaseStartupService):
       logger.warning(f"Ringover streamer health check failed: {e}")
       return False
 
-  async def cleanup(self, context: "StartupContext"):
-    """Clean up the ringover-streamer service."""
-    if self.process:
-      try:
-        logger.info("Stopping ringover-streamer...")
-
-        # Try graceful shutdown first
-        if hasattr(os, 'killpg'):
-          os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
-        else:
-          self.process.terminate()
-
-        # Wait for graceful shutdown
+    async def cleanup(self, context: "StartupContext"):
+      """Clean up the ringover-streamer service."""
+      if self.process:
         try:
-          await asyncio.wait_for(
-              asyncio.create_task(self._wait_for_process_end()),
-              timeout=10.0
-          )
-        except asyncio.TimeoutError:
-          logger.warning(
-              "Ringover streamer didn't stop gracefully, forcing...")
+          logger.info("Stopping ringover-streamer...")
 
-          # Force kill if graceful shutdown failed
+          # Try graceful shutdown first
           if hasattr(os, 'killpg'):
-            os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
           else:
-            self.process.kill()
+            self.process.terminate()
 
-          await self._wait_for_process_end()
+          # Wait for graceful shutdown
+          try:
+            await asyncio.wait_for(
+                asyncio.create_task(self._wait_for_process_end()),
+                timeout=10.0
+            )
+          except asyncio.TimeoutError:
+            logger.warning(
+                "Ringover streamer didn't stop gracefully, forcing...")
 
-        logger.info("Ringover streamer stopped")
+            # Force kill if graceful shutdown failed
+            if hasattr(os, 'killpg'):
+              os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            else:
+              self.process.kill()
 
-      except Exception as e:
-        logger.error(f"Error stopping ringover-streamer: {e}")
-      finally:
-        self.process = None
-        self.is_running = False
+            await self._wait_for_process_end()
+
+          logger.info("Ringover streamer stopped")
+
+        except Exception as e:
+          logger.error(f"Error stopping ringover-streamer: {e}")
+        finally:
+          self.process = None
+          self.is_running = False
 
     async def _wait_for_process_end(self):
-        """Wait for the process to end."""
-        while self.process and self.process.poll() is None:
-            await asyncio.sleep(0.1)
-            
-    def get_health_check(self) -> Dict[str, Any]:
-        """
-        Get health check information for this service.
+      """Wait for the process to end."""
+      while self.process and self.process.poll() is None:
+        await asyncio.sleep(0.1)
 
-        Returns:
-            Dict containing health status
-        """
-        return {
-            "service": self.name,
-            "status": "running" if self.is_running and self._is_process_healthy() else "error",
-            "critical": self.is_critical,
-            "metadata": self.get_status()
-        }
-            
+    def get_health_check(self) -> Dict[str, Any]:
+      """
+      Get health check information for this service.
+
+      Returns:
+          Dict containing health status
+      """
+      return {
+          "service": self.name,
+          "status": "running" if self.is_running and self._is_process_healthy() else "error",
+          "critical": self.is_critical,
+          "metadata": self.get_status()
+      }
+
     def get_status(self) -> Dict[str, Any]:
-        """Get the current status of the service."""
-        return {
-            "is_running": self.is_running,
-            "process_healthy": self._is_process_healthy(),
-            "pid": self.process.pid if self.process else None,
-            "host": self.streamer_host,
-            "port": self.streamer_port
-        }
+      """Get the current status of the service."""
+      return {
+          "is_running": self.is_running,
+          "process_healthy": self._is_process_healthy(),
+          "pid": self.process.pid if self.process else None,
+          "host": self.streamer_host,
+          "port": self.streamer_port
+      }

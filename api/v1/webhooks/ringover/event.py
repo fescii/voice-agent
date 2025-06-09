@@ -21,8 +21,16 @@ router = APIRouter()
 # Global orchestrator instances
 _orchestrator: Optional[CallOrchestrator] = None
 _webhook_orchestrator: Optional[RingoverWebhookOrchestrator] = None
-_webhook_security = WebhookSecurity()
+_webhook_security: Optional[WebhookSecurity] = None
 _streamer_integration: Optional[RingoverStreamerIntegration] = None
+
+
+def get_webhook_security() -> WebhookSecurity:
+  """Get or create webhook security instance."""
+  global _webhook_security
+  if _webhook_security is None:
+    _webhook_security = WebhookSecurity()
+  return _webhook_security
 
 
 def get_orchestrator() -> CallOrchestrator:
@@ -78,7 +86,7 @@ async def handle_ringover_event(
     body = await request.body()
 
     # Verify webhook signature using security service
-    if not _webhook_security.verify_signature(body, x_ringover_signature):
+    if not get_webhook_security().verify_signature(body, x_ringover_signature):
       logger.warning("Invalid webhook signature received")
       raise HTTPException(
           status_code=status.HTTP_401_UNAUTHORIZED,

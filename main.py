@@ -96,7 +96,9 @@ if __name__ == "__main__":
   uvicorn.run(
       "main:app",
       host="0.0.0.0",
-      port=8000,  # TODO: Get from centralized config
-      reload=True,  # TODO: Get from centralized config
+      port=8001,  # Use different port to avoid conflicts
+      reload=True,
+      # Exclude logs and cache directories
+      reload_dirs=[".", "!./logs", "!./.venv", "!./__pycache__"],
       log_level="info"
   )

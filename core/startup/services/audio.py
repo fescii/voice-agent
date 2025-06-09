@@ -2,6 +2,7 @@
 Audio service startup initialization.
 Handles audio processing and streaming services.
 """
+import os
 from typing import Dict, Any
 
 from .base import BaseStartupService
@@ -14,7 +15,7 @@ class AudioService(BaseStartupService):
   """Audio processing service startup handler."""
 
   def __init__(self):
-    super().__init__("audio", is_critical=False)
+    super().__init__("audio", is_critical=True)
 
   async def initialize(self, context) -> Dict[str, Any]:
     """Initialize audio processing services."""
@@ -22,8 +23,11 @@ class AudioService(BaseStartupService):
       # Initialize audio processor
       from services.audio.processor import AudioProcessor
 
-      # Get audio configuration
-      audio_config = context.configuration.get("audio", {})
+      # Get audio configuration from environment or use defaults
+      audio_config = {
+          "sample_rate": int(os.getenv("STT_SAMPLE_RATE", "16000")),
+          "chunk_size": int(os.getenv("AUDIO_CHUNK_SIZE", "1024")),
+      }
 
       # Initialize processor
       processor = AudioProcessor()

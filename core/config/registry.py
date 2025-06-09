@@ -114,13 +114,28 @@ class ConfigRegistry:
     elif provider_str == "custom":
       provider = LLMProvider.CUSTOM
 
+    # Choose API key based on provider
+    api_key = ""
+    if provider == LLMProvider.OPENAI:
+      api_key = os.getenv("OPENAI_API_KEY", "")
+    elif provider == LLMProvider.ANTHROPIC:
+      api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    elif provider == LLMProvider.GOOGLE:
+      api_key = os.getenv("GOOGLE_API_KEY", "")
+    else:
+      api_key = os.getenv("LLM_API_KEY", "")
+
     return LLMConfig(
         provider=provider,
-        api_key=os.getenv("LLM_API_KEY", ""),
-        model=os.getenv("LLM_MODEL", "gpt-4"),
-        base_url=os.getenv("LLM_BASE_URL"),
-        max_tokens=int(os.getenv("LLM_MAX_TOKENS", "1000")),
-        temperature=float(os.getenv("LLM_TEMPERATURE", "0.7")),
+        api_key=api_key,
+        model=os.getenv(
+            "OPENAI_MODEL", "gpt-4") if provider == LLMProvider.OPENAI else os.getenv("LLM_MODEL", "gpt-4"),
+        base_url=os.getenv(
+            "OPENAI_BASE_URL") if provider == LLMProvider.OPENAI else os.getenv("LLM_BASE_URL"),
+        max_tokens=int(os.getenv("OPENAI_MAX_TOKENS", "1000")) if provider == LLMProvider.OPENAI else int(
+            os.getenv("LLM_MAX_TOKENS", "1000")),
+        temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.7")) if provider == LLMProvider.OPENAI else float(
+            os.getenv("LLM_TEMPERATURE", "0.7")),
         stream=os.getenv("LLM_STREAM", "true").lower() == "true"
     )
 
@@ -136,11 +151,23 @@ class ConfigRegistry:
     elif provider_str == "custom":
       provider = STTProvider.CUSTOM
 
+    # Choose API key based on provider
+    api_key = ""
+    if provider == STTProvider.WHISPER:
+      api_key = os.getenv("WHISPER_API_KEY", "")
+    elif provider == STTProvider.GOOGLE:
+      api_key = os.getenv("GOOGLE_STT_API_KEY", "")
+    elif provider == STTProvider.AZURE:
+      api_key = os.getenv("AZURE_STT_API_KEY", "")
+    else:
+      api_key = os.getenv("STT_API_KEY", "")
+
     return STTConfig(
         provider=provider,
-        api_key=os.getenv("STT_API_KEY", ""),
+        api_key=api_key,
         language=os.getenv("STT_LANGUAGE", "en-US"),
-        model=os.getenv("STT_MODEL", "whisper-1")
+        model=os.getenv(
+            "WHISPER_MODEL", "whisper-1") if provider == STTProvider.WHISPER else os.getenv("STT_MODEL", "whisper-1")
     )
 
   def _create_tts_config(self) -> TTSConfig:
@@ -157,9 +184,22 @@ class ConfigRegistry:
     elif provider_str == "custom":
       provider = TTSProvider.CUSTOM
 
+    # Choose API key based on provider
+    api_key = ""
+    if provider == TTSProvider.ELEVENLABS:
+      api_key = os.getenv("ELEVENLABS_API_KEY", "")
+    elif provider == TTSProvider.OPENAI:
+      api_key = os.getenv("OPENAI_TTS_API_KEY", "")
+    elif provider == TTSProvider.GOOGLE:
+      api_key = os.getenv("GOOGLE_TTS_API_KEY", "")
+    elif provider == TTSProvider.AZURE:
+      api_key = os.getenv("AZURE_TTS_API_KEY", "")
+    else:
+      api_key = os.getenv("TTS_API_KEY", "")
+
     return TTSConfig(
         provider=provider,
-        api_key=os.getenv("TTS_API_KEY", ""),
+        api_key=api_key,
         voice_id=os.getenv("TTS_VOICE_ID", "default"),
         model=os.getenv("TTS_MODEL", "tts-1")
     )

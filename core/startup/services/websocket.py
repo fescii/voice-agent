@@ -1,5 +1,6 @@
 """
-WebSocket service startup initialization.
+WebSocket s  def __init__(self):
+    super().__init__("websocket", is_critical=True)vice startup initialization.
 Handles WebSocket connection management and handlers.
 """
 from typing import Dict, Any
@@ -19,25 +20,19 @@ class WebSocketService(BaseStartupService):
   async def initialize(self, context) -> Dict[str, Any]:
     """Initialize WebSocket services."""
     try:
-      # Initialize WebSocket handlers orchestrator
-      from wss.handlers import WebSocketHandlers
+      # Import the global WebSocket handlers instance
+      from wss.handlers.instances import websocket_handlers
 
       # Get WebSocket configuration
-      ws_config = context.configuration.get("websocket", {})
-
-      # Initialize WebSocket handlers orchestrator
-      orchestrator = WebSocketHandlers()
-
-      # Get the connection manager from the orchestrator
-      connection_manager = orchestrator.connection_manager
+      ws_config = context.configuration.websocket
 
       logger.info("WebSocket services initialized successfully")
 
       return {
-          "connection_manager": connection_manager,
-          "orchestrator": orchestrator,
-          "max_connections": ws_config.get("max_connections", 1000),
-          "ping_interval": ws_config.get("ping_interval", 30),
+          "connection_manager": websocket_handlers,
+          "orchestrator": websocket_handlers,
+          "max_connections": getattr(ws_config, 'max_connections', 1000),
+          "ping_interval": getattr(ws_config, 'ping_interval', 30),
           "status": "ready"
       }
 
