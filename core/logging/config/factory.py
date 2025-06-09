@@ -21,14 +21,14 @@ class LoggingConfigFactory:
     return {
         "version": 1,
         "disable_existing_loggers": False,            "formatters": {
-                "detailed": {
-                    "()": "core.logging.format.CustomFormatter",
-                    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                },
-                "simple": {
-                    "format": "%(levelname)s - %(message)s"
-                }
+            "detailed": {
+                "()": "core.logging.format.CustomFormatter",
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             },
+            "simple": {
+                "format": "%(levelname)s - %(message)s"
+            }
+        },
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
