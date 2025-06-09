@@ -43,7 +43,7 @@ docs/
 ### **Files Moved and Renamed**
 
 ✅ **From service directories:**
-- `services/ringover/RINGOVER_STREAMER_README.md` → `docs/services/ringover/streamer.md`
+- `services/ringover/RINGOVER_STREAMER_README.md` → `docs/services/ringover/streaming/integration.md`
 - `services/ringover/IMPLEMENTATION_SUMMARY.md` → `docs/services/ringover/implementation.md`
 - `services/ringover/DEPLOYMENT.md` → `docs/services/ringover/deployment.md`
 - `services/ringover/README.md` → `docs/services/ringover/overview.md`
@@ -52,9 +52,6 @@ docs/
 ✅ **From project root:**
 - `INTEGRATION_SUMMARY.md` → `docs/integration/summary.md`
 - `TEST_ORGANIZATION_SUMMARY.md` → `docs/testing/organization.md`
-
-✅ **From external directories:**
-- `external/ringover-streamer/README.md` → `docs/external/streamer.md`
 
 ✅ **Reorganized existing docs:**
 - `docs/postgres.md` → `docs/databases/postgres.md`

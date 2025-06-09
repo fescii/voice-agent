@@ -13,24 +13,11 @@ from core.config.registry import config_registry
 from core.logging.setup import setup_logging
 from core.startup.manager import StartupManager
 from core.startup.context import get_startup_context
+from core.startup.lifespan import lifespan_manager
 from wss.endpoint import websocket_router
 
 
-# Initialize startup manager globally to maintain context throughout app lifecycle
-startup_manager = StartupManager()
-
-
-# Startup context is now imported from core.startup.context
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-  """Application lifespan manager to handle startup and shutdown events."""
-  async with startup_manager.startup_context() as context:
-    # Store startup context in app state
-    app.state.startup_context = context
-    yield
-  # Cleanup happens automatically in the startup_context context manager
+# Remove the old lifespan manager and use the new modular one
 
 
 def create_app() -> FastAPI:
@@ -48,7 +35,7 @@ def create_app() -> FastAPI:
       version="1.0.0",
       debug=True,  # TODO: Get from centralized config
       description="AI Voice Agent System with Ringover Integration",
-      lifespan=lifespan
+      lifespan=lifespan_manager
   )
 
   # Add CORS middleware
