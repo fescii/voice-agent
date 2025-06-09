@@ -127,6 +127,7 @@ class StartupManager:
     from .services.audio import AudioService
     from .services.websocket import WebSocketService
     from .services.monitoring import MonitoringService
+    from .services.ringover import RingoverService
 
     services = [
         DatabaseService(),
@@ -135,7 +136,8 @@ class StartupManager:
         LLMService(),
         AudioService(),
         WebSocketService(),
-        MonitoringService()
+        MonitoringService(),
+        RingoverService()
     ]
 
     for service in services:
