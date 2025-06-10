@@ -1,7 +1,7 @@
 """
 Transcript database model.
 """
-from sqlalchemy import Column, String, Text, DateTime, Float, ForeignKey, Boolean
+from sqlalchemy import Column, String, Text, DateTime, Float, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from data.db.base import BaseModel
 
@@ -11,7 +11,7 @@ class Transcript(BaseModel):
   __tablename__ = "transcripts"
 
   # Link to call log
-  call_log_id = Column(Float, ForeignKey(
+  call_log_id = Column(Integer, ForeignKey(
       "call_logs.id"), nullable=False, index=True)
   call_log = relationship("CallLog", back_populates="transcripts")
 

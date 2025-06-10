@@ -1,7 +1,7 @@
 """
 Agent profile loader service
 """
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, List
 from data.db.models.agentconfig import AgentConfig
 from data.db.ops.agent.config import AgentConfigOps
 from core.logging.setup import get_logger
@@ -79,3 +79,16 @@ class AgentProfileLoader:
     except Exception as e:
       logger.error(f"Error deleting agent config {agent_id}: {e}")
       return False
+
+  async def get_all_agent_configs(self) -> List[AgentConfig]:
+    """
+    Get all agent configurations
+
+    Returns:
+        List of AgentConfig objects
+    """
+    try:
+      return await self.config_ops.get_all()
+    except Exception as e:
+      logger.error(f"Error getting all agent configs: {e}")
+      return []

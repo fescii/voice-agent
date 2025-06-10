@@ -1,1 +1,3 @@
-# Authentication module
+"""
+Authentication service module.
+"""

@@ -7,6 +7,7 @@ import asyncpg
 
 from core.startup.services.base import BaseStartupService
 from data.db.connection import get_async_engine
+from data.db.ops.sync.tables import DatabaseSyncService
 from core.config.registry import config_registry
 from core.logging.setup import get_logger
 from .queries import (
@@ -29,6 +30,7 @@ class DatabaseService(BaseStartupService):
   def __init__(self):
     super().__init__("database", is_critical=True)
     self.db_config = config_registry.database
+    self.sync_service = DatabaseSyncService()
 
   async def initialize(self, context: "StartupContext") -> Dict[str, Any]:
     """Initialize PostgreSQL database connection and verify connectivity."""
@@ -85,7 +87,20 @@ class DatabaseService(BaseStartupService):
             "active_connections": db_stats.get("connections", 0)
         }
 
-        return {**pool_info, **postgres_info}
+        # Sync database tables (create if they don't exist)
+        logger.info("Synchronizing database tables...")
+        sync_results = await self.sync_service.sync_tables()
+
+        # Add sync results to return metadata
+        table_sync_info = {
+            "tables_checked": sync_results.get("tables_checked", 0),
+            "tables_created": sync_results.get("tables_created", 0),
+            "tables_skipped": sync_results.get("tables_skipped", 0),
+            "sync_errors": len(sync_results.get("errors", [])),
+            "created_tables": sync_results.get("created_tables", []),
+        }
+
+        return {**pool_info, **postgres_info, **table_sync_info}
     except SQLAlchemyError as e:
       logger.error(f"Database connection failed: {e}")
       raise

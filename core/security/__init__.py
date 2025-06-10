@@ -1,1 +1,3 @@
-# Security module
+"""
+Security module for authentication and authorization.
+"""

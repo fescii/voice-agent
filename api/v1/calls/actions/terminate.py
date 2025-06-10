@@ -7,7 +7,7 @@ from typing import Any
 from api.v1.schemas.request.call import CallTerminateRequest
 from api.v1.schemas.response.call import CallTerminateResponse
 from services.call.management.supervisor import CallSupervisor
-from core.security.auth.token import get_current_user
+from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)

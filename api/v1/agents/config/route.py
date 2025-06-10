@@ -2,12 +2,14 @@
 Agent configuration management endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Any, List
+from typing import Any, List, Dict
+from datetime import datetime, timezone
 
 from api.v1.schemas.request.agent import AgentConfigUpdateRequest, AgentConfigCreateRequest
 from api.v1.schemas.response.agent import AgentConfigResponse
 from services.agent.profile.loader import AgentProfileLoader
-from core.security.auth.token import get_current_user
+from data.db.models.agentconfig import AgentConfig
+from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -36,7 +38,7 @@ async def get_agent_config(
     logger.info(f"Getting config for agent {agent_id} for user {current_user}")
 
     loader = AgentProfileLoader()
-    agent_config = await loader.load_agent_profile(agent_id)
+    agent_config = await loader.get_agent_config(agent_id)
 
     if not agent_config:
       raise HTTPException(
@@ -46,17 +48,7 @@ async def get_agent_config(
 
     logger.info(f"Retrieved config for agent {agent_id}")
 
-    return AgentConfigResponse(
-        agent_id=agent_id,
-        name=agent_config.name,
-        persona=agent_config.persona,
-        llm_provider=agent_config.llm_provider,
-        tts_provider=agent_config.tts_provider,
-        voice_settings=agent_config.voice_settings,
-        active=agent_config.active,
-        created_at=agent_config.created_at,
-        updated_at=agent_config.updated_at
-    )
+    return _agent_config_to_response(agent_config)
 
   except HTTPException:
     raise
@@ -85,21 +77,11 @@ async def list_agent_configs(
     logger.info(f"Listing all agent configs for user {current_user}")
 
     loader = AgentProfileLoader()
-    agents = await loader.list_all_agents()
+    agents = await loader.get_all_agent_configs()
 
     result = []
     for agent in agents:
-      result.append(AgentConfigResponse(
-          agent_id=agent.agent_id,
-          name=agent.name,
-          persona=agent.persona,
-          llm_provider=agent.llm_provider,
-          tts_provider=agent.tts_provider,
-          voice_settings=agent.voice_settings,
-          active=agent.active,
-          created_at=agent.created_at,
-          updated_at=agent.updated_at
-      ))
+      result.append(_agent_config_to_response(agent))
 
     logger.info(f"Retrieved {len(result)} agent configs")
     return result
@@ -137,7 +119,7 @@ async def update_agent_config(
         f"Updating config for agent {agent_id} for user {current_user}")
 
     loader = AgentProfileLoader()
-    updated_config = await loader.update_agent_profile(agent_id, request.dict(exclude_unset=True))
+    updated_config = await loader.update_agent_config(agent_id, request.dict(exclude_unset=True))
 
     if not updated_config:
       raise HTTPException(
@@ -147,17 +129,7 @@ async def update_agent_config(
 
     logger.info(f"Updated config for agent {agent_id}")
 
-    return AgentConfigResponse(
-        agent_id=agent_id,
-        name=updated_config.name,
-        persona=updated_config.persona,
-        llm_provider=updated_config.llm_provider,
-        tts_provider=updated_config.tts_provider,
-        voice_settings=updated_config.voice_settings,
-        active=updated_config.active,
-        created_at=updated_config.created_at,
-        updated_at=updated_config.updated_at
-    )
+    return _agent_config_to_response(updated_config)
 
   except HTTPException:
     raise
@@ -167,3 +139,29 @@ async def update_agent_config(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=f"Failed to update agent config: {str(e)}"
     )
+
+
+def _agent_config_to_response(agent_config: AgentConfig) -> AgentConfigResponse:
+  """
+  Convert AgentConfig model to AgentConfigResponse.
+
+  Args:
+      agent_config: The AgentConfig database model
+
+  Returns:
+      AgentConfigResponse with properly typed fields
+  """
+  # Use getattr with defaults to safely extract values
+  return AgentConfigResponse(
+      agent_id=getattr(agent_config, 'agent_id', ''),
+      name=getattr(agent_config, 'name', ''),
+      persona=getattr(agent_config, 'persona_prompt', ''),
+      llm_provider=getattr(agent_config, 'llm_provider', 'openai'),
+      tts_provider=getattr(agent_config, 'tts_provider', 'elevenlabs'),
+      voice_settings=getattr(agent_config, 'custom_config', None) or {},
+      active=getattr(agent_config, 'is_active', True),
+      created_at=getattr(agent_config, 'created_at',
+                         datetime.now(timezone.utc)),
+      updated_at=getattr(agent_config, 'updated_at',
+                         datetime.now(timezone.utc))
+  )

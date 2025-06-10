@@ -11,6 +11,7 @@ from .providers.ringover import RingoverConfig
 from .providers.ai import LLMConfig, STTConfig, TTSConfig, LLMProvider, STTProvider, TTSProvider
 from .providers.database import DatabaseConfig
 from .providers.redis import RedisConfig
+from .providers.security import SecurityConfig
 from .websocket import WebSocketConfig
 
 
@@ -44,6 +45,7 @@ class ConfigRegistry:
           'ringover': RingoverConfig(),
           'database': DatabaseConfig(),
           'redis': RedisConfig(),
+          'security': SecurityConfig(),
           'llm': self._create_llm_config(),
           'stt': self._create_stt_config(),
           'tts': self._create_tts_config(),
@@ -86,6 +88,11 @@ class ConfigRegistry:
   def websocket(self) -> WebSocketConfig:
     """Get WebSocket configuration"""
     return self._configs['websocket']
+
+  @property
+  def security(self) -> SecurityConfig:
+    """Get Security configuration"""
+    return self._configs['security']
 
   def get_config(self, name: str) -> Any:
     """Get configuration by name"""

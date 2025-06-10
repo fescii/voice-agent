@@ -9,7 +9,7 @@ from api.v1.schemas.request.call import CallInitiateRequest
 from api.v1.schemas.response.call import CallInitiateResponse, CallStatus
 from services.call.management.orchestrator import CallOrchestrator
 from core.config.registry import config_registry
-from core.security.auth.token import get_current_user
+from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)

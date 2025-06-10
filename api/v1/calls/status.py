@@ -6,7 +6,7 @@ from typing import Any
 
 from api.v1.schemas.response.call import CallStatusResponse
 from services.call.state.tracker import CallStateTracker
-from core.security.auth.token import get_current_user
+from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
