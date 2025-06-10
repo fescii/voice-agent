@@ -44,7 +44,8 @@ class UserReadTests:
       existing_user = await get_user_by_email(session, "idtest@example.com")
       if existing_user:
         user = existing_user
-        user_id = getattr(existing_user, 'id', 0)  # Safely get the actual ID value
+        # Safely get the actual ID value
+        user_id = getattr(existing_user, 'id', 0)
         should_cleanup = False
       else:
         # Create a test user first
@@ -67,7 +68,8 @@ class UserReadTests:
       found_user = await get_user_by_id(session, user_id)
 
       assert found_user is not None
-      assert getattr(found_user, 'id', None) == user_id  # Compare actual values safely
+      # Compare actual values safely
+      assert getattr(found_user, 'id', None) == user_id
       assert str(found_user.email) == "idtest@example.com"
 
       # Clean up only if we created the user

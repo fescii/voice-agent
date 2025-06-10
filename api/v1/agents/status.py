@@ -44,16 +44,16 @@ async def get_agent_status(
       )
 
     logger.info(
-        f"Retrieved status for agent {agent_id}: {agent_status.status}")
+        f"Retrieved status for agent {agent_id}: {agent_status['status']}")
 
     return AgentStatusResponse(
         agent_id=agent_id,
-        name=agent_status.name,
-        active=agent_status.active,
-        current_calls=agent_status.current_calls,
-        max_calls=agent_status.max_calls,
-        status=agent_status.status,
-        last_activity=agent_status.last_activity
+        name=agent_status["name"],
+        active=agent_status["active"],
+        current_calls=agent_status["current_calls"],
+        max_calls=agent_status["max_calls"],
+        status=agent_status["status"],
+        last_activity=agent_status["last_activity"]
     )
 
   except HTTPException:
@@ -83,18 +83,18 @@ async def list_agent_statuses(
     logger.info(f"Listing all agent statuses for user {current_user}")
 
     agent_router = AgentRouter()
-    agents = await agent_router.list_agent_statuses()
+    agents = await agent_router.get_all_agent_statuses()
 
     result = []
     for agent in agents:
       result.append(AgentStatusResponse(
-          agent_id=agent.agent_id,
-          name=agent.name,
-          active=agent.active,
-          current_calls=agent.current_calls,
-          max_calls=agent.max_calls,
-          status=agent.status,
-          last_activity=agent.last_activity
+          agent_id=agent["agent_id"],
+          name=agent["name"],
+          active=agent["active"],
+          current_calls=agent["current_calls"],
+          max_calls=agent["max_calls"],
+          status=agent["status"],
+          last_activity=agent["last_activity"]
       ))
 
     logger.info(f"Retrieved {len(result)} agent statuses")
