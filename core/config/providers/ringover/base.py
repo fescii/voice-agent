@@ -13,10 +13,11 @@ class BaseRingoverConfig:
     self.api_key = os.getenv("RINGOVER_API_KEY", "")
     api_base_url = os.getenv("RINGOVER_API_BASE_URL", "")
 
-    # Ensure base URL has trailing slash for aiohttp
-    self.api_base_url = api_base_url.rstrip('/') + '/' if api_base_url else ""
+    # Remove any trailing slash to avoid double slashes
+    self.api_base_url = api_base_url.rstrip('/') if api_base_url else ""
 
     self.api_secret = os.getenv("RINGOVER_API_SECRET", "")
+    self.webhook_url = os.getenv("RINGOVER_WEBHOOK_URL", "")
 
     # Validate required fields
     if not self.api_base_url:

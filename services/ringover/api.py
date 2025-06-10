@@ -59,7 +59,7 @@ class RingoverAPIClient:
     self.config = config_registry.ringover
     self.session: Optional[aiohttp.ClientSession] = None
     self.headers = {
-        "Authorization": f"Bearer {self.config.api_key}",
+        "Authorization": self.config.api_key,
         "Content-Type": "application/json"
     }
 
@@ -102,12 +102,12 @@ class RingoverAPIClient:
         "to": to_number,
         "from": from_number,
         "agent_id": agent_id,
-        "webhook_url": f"{self.config.api_base_url}/webhooks/ringover",
+        "webhook_url": f"{self.config.webhook_url}/api/v1/webhooks/ringover/event",
         "metadata": metadata or {}
     }
 
     try:
-      async with self.session.post("/v1/calls", json=payload) as response:
+      async with self.session.post("calls", json=payload) as response:
         if response.status == 201:
           data = await response.json()
           return CallInfo(
@@ -149,7 +149,7 @@ class RingoverAPIClient:
     }
 
     try:
-      async with self.session.post(f"/v1/calls/{call_id}/control", json=payload) as response:
+      async with self.session.post(f"calls/{call_id}/control", json=payload) as response:
         return response.status == 200
     except Exception as e:
       logger.error(f"Exception during call answer: {e}")
@@ -172,7 +172,7 @@ class RingoverAPIClient:
     payload = {"action": "hangup"}
 
     try:
-      async with self.session.post(f"/v1/calls/{call_id}/control", json=payload) as response:
+      async with self.session.post(f"calls/{call_id}/control", json=payload) as response:
         return response.status == 200
     except Exception as e:
       logger.error(f"Exception during call hangup: {e}")
@@ -193,7 +193,7 @@ class RingoverAPIClient:
       return None
 
     try:
-      async with self.session.get(f"/v1/calls/{call_id}") as response:
+      async with self.session.get(f"calls/{call_id}") as response:
         if response.status == 200:
           data = await response.json()
           return CallInfo(
@@ -227,12 +227,12 @@ class RingoverAPIClient:
       logger.error("API client session not initialized")
       return []
 
-    params = {"status": "active"}
+    params = {}
     if agent_id:
       params["agent_id"] = agent_id
 
     try:
-      async with self.session.get("/v1/calls", params=params) as response:
+      async with self.session.get("calls", params=params) as response:
         if response.status == 200:
           data = await response.json()
           return [
@@ -249,7 +249,9 @@ class RingoverAPIClient:
               for call in data.get("calls", [])
           ]
         else:
-          logger.warning(f"Failed to list calls: {response.status}")
+          error_text = await response.text()
+          logger.warning(
+              f"Failed to list calls: {response.status} - {error_text}")
           return []
     except Exception as e:
       logger.error(f"Exception during call listing: {e}")
