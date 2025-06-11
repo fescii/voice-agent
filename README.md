@@ -265,7 +265,7 @@ python main.py
 
 ### Service Startup Time
 
-**Complete initialization: ~7-9 seconds**
+### Complete initialization: ~7-9 seconds
 
 ```text
 🚀 Starting application initialization...
