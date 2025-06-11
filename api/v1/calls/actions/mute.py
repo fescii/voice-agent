@@ -6,7 +6,7 @@ from typing import Any
 
 from api.v1.schemas.request.call import CallMuteRequest
 from api.v1.schemas.response.call import CallMuteResponse
-from services.call.management.supervisor import CallSupervisor
+from services.call.state.manager import CallStateManager, CallState
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
@@ -36,10 +36,22 @@ async def mute_call(
     logger.info(
         f"Setting mute status for call {request.call_id} to {request.muted} for user {current_user}")
 
-    supervisor = CallSupervisor()
-    result = await supervisor.set_mute_status(
+    manager = CallStateManager()
+
+    # Get current state first to validate call exists
+    current_state_info = await manager.get_state(request.call_id)
+    if not current_state_info:
+      raise HTTPException(
+          status_code=status.HTTP_404_NOT_FOUND,
+          detail=f"Call {request.call_id} not found"
+      )
+
+    # Update state based on mute request
+    new_state = CallState.MUTED if request.muted else CallState.CONNECTED
+    await manager.update_state(
         call_id=request.call_id,
-        muted=request.muted
+        new_state=new_state,
+        metadata={"muted": request.muted}
     )
 
     logger.info(f"Call {request.call_id} mute status set to {request.muted}")

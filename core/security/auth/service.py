@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from data.db.connection import get_db_session
 from data.db.models.user import User
 from data.db.ops.user.read import get_user_by_email, get_user_by_id
-from data.db.ops.user.update import update_user_last_login
+from data.db.ops.user.update import update_user_last_login, update_user_password
 from .password import PasswordService
 from .jwt import TokenService
 from core.logging.setup import get_logger
@@ -219,7 +219,7 @@ class AuthService:
         new_hash = self.password_service.hash_password(new_password)
 
         # Update password (would need update operation)
-        # await update_user_password(session, user_id, new_hash)
+        await update_user_password(session, user_id, new_hash)
 
         logger.info(f"Password changed for user: {user_id}")
         return True

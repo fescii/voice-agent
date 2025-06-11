@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any
 
 from api.v1.schemas.request.call import CallTerminateRequest
-from api.v1.schemas.response.call import CallTerminateResponse
+from api.v1.schemas.response.call import CallTerminateResponse, CallStatus
 from services.call.management.supervisor import CallSupervisor
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
@@ -36,16 +36,13 @@ async def terminate_call(
     logger.info(f"Terminating call {request.call_id} for user {current_user}")
 
     supervisor = CallSupervisor()
-    result = await supervisor.terminate_call(
-        call_id=request.call_id,
-        reason=request.reason
-    )
+    result = await supervisor.end_call(call_id=request.call_id)
 
     logger.info(f"Call {request.call_id} terminated successfully")
 
     return CallTerminateResponse(
         call_id=request.call_id,
-        status="terminated",
+        status=CallStatus.TERMINATED,
         message="Call terminated successfully"
     )
 

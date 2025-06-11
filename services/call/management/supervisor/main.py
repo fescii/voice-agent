@@ -91,3 +91,7 @@ class CallSupervisor:
   async def resume_call(self, call_id: str):
     """Resume a call."""
     await self.operations_manager.resume_call(call_id)
+
+  async def transfer_call(self, call_id: str, target_number: str) -> bool:
+    """Transfer a call to another number."""
+    return await self.operations_manager.transfer_call(call_id, target_number)

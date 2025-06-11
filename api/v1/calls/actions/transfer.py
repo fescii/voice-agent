@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any
 
 from api.v1.schemas.request.call import CallTransferRequest
-from api.v1.schemas.response.call import CallTransferResponse
-from services.call.management.supervisor import CallSupervisor
+from api.v1.schemas.response.call import CallTransferResponse, CallStatus
+from services.call.management.supervisor.main import CallSupervisor
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
@@ -39,8 +39,7 @@ async def transfer_call(
     supervisor = CallSupervisor()
     result = await supervisor.transfer_call(
         call_id=request.call_id,
-        target_number=request.target_number,
-        transfer_type=request.transfer_type
+        target_number=request.target_number
     )
 
     logger.info(f"Call {request.call_id} transferred successfully")
@@ -48,7 +47,7 @@ async def transfer_call(
     return CallTransferResponse(
         call_id=request.call_id,
         target_number=request.target_number,
-        status="transferred",
+        status=CallStatus.TRANSFERRED,
         message="Call transferred successfully"
     )
 

@@ -4,13 +4,30 @@ Endpoint for getting call status
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any
 
-from api.v1.schemas.response.call import CallStatusResponse
-from services.call.state.tracker import CallStateTracker
+from api.v1.schemas.response.call import CallStatusResponse, CallStatus
+from services.call.state.manager import CallStateManager, CallState
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+
+def map_call_state_to_status(call_state: CallState) -> CallStatus:
+  """Map CallState to CallStatus."""
+  mapping = {
+      CallState.INITIALIZING: CallStatus.INITIATED,
+      CallState.RINGING: CallStatus.RINGING,
+      CallState.CONNECTED: CallStatus.ANSWERED,
+      CallState.ON_HOLD: CallStatus.IN_PROGRESS,
+      CallState.MUTED: CallStatus.IN_PROGRESS,
+      CallState.TRANSFERRING: CallStatus.TRANSFERRED,
+      CallState.RECORDING: CallStatus.IN_PROGRESS,
+      CallState.ENDING: CallStatus.ENDED,
+      CallState.ENDED: CallStatus.ENDED,
+      CallState.FAILED: CallStatus.FAILED
+  }
+  return mapping.get(call_state, CallStatus.INITIATED)
 
 
 @router.get("/{call_id}/status", response_model=CallStatusResponse)
@@ -34,8 +51,8 @@ async def get_call_status(
   try:
     logger.info(f"Getting status for call {call_id} for user {current_user}")
 
-    tracker = CallStateTracker()
-    call_state = await tracker.get_call_state(call_id)
+    manager = CallStateManager()
+    call_state = await manager.get_state(call_id)
 
     if not call_state:
       raise HTTPException(
@@ -43,15 +60,16 @@ async def get_call_status(
           detail=f"Call {call_id} not found"
       )
 
-    logger.info(f"Retrieved status for call {call_id}: {call_state.status}")
+    logger.info(f"Retrieved status for call {call_id}: {call_state.state}")
 
+    # Map CallState to CallStatus and handle missing fields
     return CallStatusResponse(
         call_id=call_id,
-        status=call_state.status,
-        agent_id=call_state.agent_id,
-        phone_number=call_state.phone_number,
-        start_time=call_state.start_time,
-        duration=call_state.duration,
+        status=map_call_state_to_status(call_state.state),
+        agent_id=call_state.agent_id or "unknown",  # Handle None
+        phone_number="",  # Not available in CallStateInfo
+        start_time=call_state.timestamp,  # Use timestamp as start_time
+        duration=None,  # Not available in CallStateInfo
         metadata=call_state.metadata
     )
 
