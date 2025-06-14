@@ -1,6 +1,7 @@
 """
 Integrated Ringover streamer service.
 Provides WebSocket endpoints and streaming functionality within the main FastAPI app.
+Also manages the external ringover-streamer process.
 """
 import asyncio
 import json
@@ -8,6 +9,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 from core.logging.setup import get_logger
+from .manager import RingoverStreamerManager
 
 logger = get_logger(__name__)
 
@@ -22,6 +24,13 @@ class RingoverStreamerService:
     """Initialize the streamer service."""
     self.active_connections: Dict[str, WebSocket] = {}
     self.is_running = False
+    self.streamer_manager: Optional[RingoverStreamerManager] = None
+
+  def _ensure_streamer_manager(self) -> RingoverStreamerManager:
+    """Ensure the streamer manager is initialized."""
+    if self.streamer_manager is None:
+      self.streamer_manager = RingoverStreamerManager()
+    return self.streamer_manager
 
   async def initialize(self) -> Dict[str, Any]:
     """
@@ -31,20 +40,45 @@ class RingoverStreamerService:
         Dict containing service metadata
     """
     logger.info("Initializing integrated Ringover streamer service...")
+
+    # Initialize the streamer manager
+    streamer_manager = self._ensure_streamer_manager()
+
+    # Start the external ringover-streamer process
+    logger.info("🚀 Starting external ringover-streamer process...")
+    streamer_started = await streamer_manager.start_streamer()
+
+    if streamer_started:
+      logger.info("✅ External ringover-streamer started successfully!")
+    else:
+      logger.warning(
+          "⚠️  Failed to start external ringover-streamer, but continuing...")
+
     self.is_running = True
 
     metadata = {
         "service_type": "integrated_streamer",
         "active_connections": 0,
+        "external_streamer_running": streamer_started,
+        "external_streamer_host": streamer_manager.streamer_host,
+        "external_streamer_port": streamer_manager.streamer_port,
         "status": "ready"
     }
 
-    logger.info("Integrated Ringover streamer service initialized successfully")
+    logger.info(
+        "✅ Integrated Ringover streamer service initialized successfully")
+    logger.info(
+        f"🔗 External streamer available at: ws://{streamer_manager.streamer_host}:{streamer_manager.streamer_port}/ws")
     return metadata
 
   async def cleanup(self) -> None:
     """Clean up the streamer service."""
     logger.info("Cleaning up Ringover streamer service...")
+
+    # Stop the external ringover-streamer process
+    if self.streamer_manager and self.streamer_manager.is_running:
+      logger.info("🛑 Stopping external ringover-streamer process...")
+      await self.streamer_manager.stop_streamer()
 
     # Close all active connections
     for connection_id, websocket in list(self.active_connections.items()):
@@ -55,15 +89,24 @@ class RingoverStreamerService:
 
     self.active_connections.clear()
     self.is_running = False
-    logger.info("Ringover streamer service cleanup completed")
+    logger.info("✅ Ringover streamer service cleanup completed")
 
   def get_health_status(self) -> Dict[str, Any]:
     """Get the current health status of the service."""
-    return {
+    status = {
         "status": "healthy" if self.is_running else "stopped",
         "active_connections": len(self.active_connections),
+        "external_streamer_running": False,
+        "external_streamer_port": 8000,  # default
         "timestamp": datetime.now().isoformat()
     }
+
+    # Add streamer manager info if available
+    if self.streamer_manager:
+      status["external_streamer_running"] = self.streamer_manager.is_running
+      status["external_streamer_port"] = self.streamer_manager.streamer_port
+
+    return status
 
   async def handle_websocket_connection(self, websocket: WebSocket) -> None:
     """

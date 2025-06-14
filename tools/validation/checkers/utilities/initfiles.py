@@ -71,9 +71,7 @@ class InitFileCreator:
         "services/stt",
         "services/taskqueue",
         "services/transcription",
-        "services/tts",
-        "wss",
-        "wss/handlers"
+        "services/tts"
     ]
 
     files_created = 0

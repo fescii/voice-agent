@@ -1,0 +1,77 @@
+### Ringover Streamer WebSocket Connection Tests
+### This file contains tests for the ringover-streamer WebSocket connections
+
+# Variables
+@baseUrl = http://localhost:8001
+@streamerUrl = ws://localhost:8000
+@streamerWsUrl = ws://localhost:8000/ws
+
+### 1. Check if main application is running
+GET {{baseUrl}}/health
+Accept: application/json
+
+### 2. Test WebSocket connection to ringover-streamer (Basic connectivity test)
+# Note: This is a WebSocket connection test - may need a WebSocket client
+# WebSocket URL: {{streamerWsUrl}}
+
+### 3. Test connection using curl (if available)
+# curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Key: test" -H "Sec-WebSocket-Version: 13" {{streamerUrl}}/ws
+
+### 4. Check if ringover-streamer health endpoint exists (if implemented)
+GET http://localhost:8000/health
+Accept: application/json
+
+### 5. Check if ringover-streamer is running via main app status
+GET {{baseUrl}}/api/v1/system/status
+Accept: application/json
+
+### 6. Test call initiation (this should trigger streamer connection)
+POST {{baseUrl}}/api/v1/calls/actions/initiate
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "phone_number": "+254713253018",
+  "agent_id": "agent_001"
+}
+
+### 7. Check active call sessions
+GET {{baseUrl}}/api/v1/calls/sessions
+Accept: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 8. Test WebSocket echo message (if streamer supports it)
+# WebSocket message to send:
+# {
+#   "event": "test",
+#   "message": "Hello from test client",
+#   "timestamp": "2025-06-14T18:00:00Z"
+# }
+
+### 9. Test authentication with ringover-streamer
+# WebSocket message for auth:
+# {
+#   "event": "authenticate",
+#   "token": "YOUR_AUTH_TOKEN",
+#   "call_id": "test_call_123"
+# }
+
+### 10. Test audio stream registration
+# WebSocket message for stream registration:
+# {
+#   "event": "register_stream",
+#   "call_id": "15913352490496089569",
+#   "stream_type": "bidirectional",
+#   "audio_format": {
+#     "codec": "pcm",
+#     "sample_rate": 16000,
+#     "channels": 1
+#   }
+# }
+
+### 11. Check ringover service status in main app
+GET {{baseUrl}}/api/v1/system/services/ringover
+Accept: application/json
+
+### 12. Test WebSocket connection to integrated streaming service
+# WebSocket URL: ws://localhost:8001/api/v1/streaming/ringover/ws

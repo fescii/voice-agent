@@ -14,7 +14,6 @@ from core.logging.setup import setup_logging
 from core.startup.manager import StartupManager
 from core.startup.context import get_startup_context
 from core.startup.lifespan import lifespan_manager
-from wss.endpoint import websocket_router
 
 
 # Remove the old lifespan manager and use the new modular one
@@ -72,7 +71,6 @@ def create_app() -> FastAPI:
 
   # Include routers
   app.include_router(api_v1_router, prefix="/api/v1")
-  app.include_router(websocket_router, prefix="/ws")
 
   return app
 

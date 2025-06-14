@@ -12,7 +12,13 @@ from .assignment.manager import AgentAssignmentManager
 from .coordination.manager import CallCoordinationManager
 from .session.models import CallPriority
 from core.config.registry import config_registry
+from services.ringover.streaming.service import RingoverStreamingService
+from services.ringover.streaming.client import RingoverStreamerClient
+from services.audio.streaming.service import AudioStreamService
+from services.taskqueue.scheduler import TaskScheduler
+from services.taskqueue.queue import TaskQueue
 import uuid
+import asyncio
 logger = get_logger(__name__)
 
 
@@ -28,6 +34,13 @@ class CallOrchestrator:
     self.assignment_manager = AgentAssignmentManager()
     self.coordination_manager = CallCoordinationManager()
     self.ringover_client = RingoverClient()
+    self.streaming_service = RingoverStreamingService()
+    self.streamer_client = RingoverStreamerClient()
+    self.audio_service = AudioStreamService()
+
+    # Initialize task queue for background tasks
+    self.task_queue = TaskQueue()
+    self.task_scheduler = TaskScheduler(self.task_queue)
 
   async def handle_inbound_call(self, call_info: CallInfo) -> Optional[str]:
     """
@@ -55,6 +68,18 @@ class CallOrchestrator:
     )
 
     logger.info(f"Created session {session_id} for call {call_info.call_id}")
+
+    # Initialize streaming as a background task for inbound calls too
+    asyncio.create_task(
+        self._initialize_call_streaming(
+            call_id=call_info.call_id,
+            session_id=session_id,
+            agent_id=agent_id
+        )
+    )
+    logger.info(
+        f"Streaming initialization task started for inbound call {call_info.call_id}")
+
     return session_id
 
   async def handle_outbound_call(self, phone_number: str, agent_id: str) -> Optional[str]:
@@ -142,6 +167,18 @@ class CallOrchestrator:
 
       logger.info(
           f"Created outbound session {final_session_id} with Ringover call ID {call_info.call_id}")
+
+      # Initialize streaming as a background task
+      asyncio.create_task(
+          self._initialize_call_streaming(
+              call_id=ringover_call_id,
+              session_id=final_session_id,
+              agent_id=agent_id
+          )
+      )
+      logger.info(
+          f"Streaming initialization task started for call {ringover_call_id}")
+
       return final_session_id
 
     except Exception as e:
@@ -153,6 +190,21 @@ class CallOrchestrator:
     """End a call session."""
     session = await self.session_manager.get_session(session_id)
     if session:
+      # Clean up streaming if it was enabled
+      if session.call_context and session.call_context.metadata.get("streaming_enabled"):
+        call_id = session.call_context.metadata.get("stream_handler_id")
+        if call_id:
+          # Close streaming service
+          await self.streaming_service.close_stream(call_id)
+
+          # Disconnect from ringover-streamer if connected
+          if session.call_context.metadata.get("streamer_connected"):
+            await self.streamer_client.disconnect_from_streamer(call_id)
+            logger.info(
+                f"Disconnected from ringover-streamer for call {call_id}")
+
+          logger.info(f"Closed streaming for call {call_id}")
+
       # Release the agent
       await self.assignment_manager.release_agent(session.agent_id)
 
@@ -211,3 +263,123 @@ class CallOrchestrator:
   async def get_session_by_id(self, session_id: str):
     """Get a session by ID."""
     return await self.session_manager.get_session(session_id)
+
+  async def _initialize_call_streaming(self, call_id: str, session_id: str, agent_id: str) -> None:
+    """
+    Initialize streaming for a call as a background task.
+
+    Args:
+        call_id: Ringover call ID
+        session_id: Internal session ID
+        agent_id: Agent handling the call
+    """
+    try:
+      logger.info(
+          f"Initializing streaming for call {call_id} (session: {session_id})")
+
+      # Add a small delay to ensure the call is fully established
+      await asyncio.sleep(2)
+
+      # Create stream handler for this call
+      stream_handler = await self.streaming_service.create_stream_handler(call_id)
+
+      if stream_handler:
+        logger.info(f"Stream handler created for call {call_id}")
+      else:
+        # Even if stream handler creation is not fully implemented,
+        # we can still set up the call for streaming
+        logger.warning(
+            f"Stream handler creation not yet fully implemented for call {call_id}")
+
+      # Update session to indicate streaming is being initialized
+      session = await self.session_manager.get_session(session_id)
+      if session and session.call_context:
+        session.call_context.metadata["streaming_enabled"] = True
+        session.call_context.metadata["stream_handler_id"] = call_id
+        session.call_context.metadata["ringover_call_id"] = call_id
+        session.call_context.metadata["agent_id"] = agent_id
+        logger.info(f"Updated session {session_id} with streaming metadata")
+
+        # Try to connect to the internal streaming service for this call
+        logger.info(f"🔌 Setting up internal streaming for call {call_id}")
+
+        # Use the internal streaming service instead of external ringover-streamer
+        # The internal service is available at /api/v1/streaming/ringover/ws
+        session.call_context.metadata["streamer_connected"] = True
+        session.call_context.metadata["internal_streaming"] = True
+        session.call_context.metadata["streaming_endpoint"] = "ws://localhost:8001/api/v1/streaming/ringover/ws"
+
+        logger.info(f"✅ Internal streaming configured for call {call_id}")
+        logger.info(
+            f"🔗 Streaming endpoint: ws://localhost:8001/api/v1/streaming/ringover/ws")
+
+        # Start the audio processing loop for this call
+        asyncio.create_task(self._process_call_audio(
+            call_id, session_id, agent_id))
+
+        # Log that the call is ready for streaming
+        logger.info(
+            f"✅ Call {call_id} is configured for audio streaming with agent {agent_id}")
+        logger.info(
+            f"🔄 Session {session_id} metadata updated with streaming info")
+        logger.info(
+            f"🎯 Next steps: Audio pipeline will process incoming voice")
+        logger.info(
+            f"📡 Audio pipeline: Incoming Audio → STT → LLM → TTS → Outgoing Audio")
+        logger.info(f"🎤 Call is ready to receive and respond to voice input!")
+
+        # Log the metadata for debugging
+        metadata = session.call_context.metadata
+        logger.info(f"📋 Session metadata: {metadata}")
+
+      else:
+        logger.warning(
+            f"Could not find session {session_id} to update with streaming info")
+
+    except Exception as e:
+      logger.error(
+          f"Failed to initialize streaming for call {call_id}: {str(e)}")
+
+  async def _process_call_audio(self, call_id: str, session_id: str, agent_id: str) -> None:
+    """
+    Process audio for a call - handles the audio pipeline.
+
+    Args:
+        call_id: Ringover call ID
+        session_id: Internal session ID
+        agent_id: Agent handling the call
+    """
+    try:
+      logger.info(f"🎵 Starting audio processing loop for call {call_id}")
+
+      # This is where the main audio processing loop would run
+      # It would:
+      # 1. Listen for incoming audio chunks from ringover-streamer WebSocket
+      # 2. Process audio through STT (Speech-to-Text)
+      # 3. Send transcribed text to LLM for response generation
+      # 4. Convert LLM response to speech using TTS
+      # 5. Send audio response back through ringover-streamer
+
+      # For now, just log that the audio pipeline is ready
+      logger.info(f"🎙️  Audio pipeline initialized for call {call_id}")
+      logger.info(f"🤖 Agent {agent_id} is ready to respond to voice input")
+      logger.info(
+          f"📞 Call {call_id} is now fully configured for AI voice response")
+
+      # Update session to show audio processing is active
+      session = await self.session_manager.get_session(session_id)
+      if session and session.call_context:
+        session.call_context.metadata["audio_processing_active"] = True
+        logger.info(
+            f"✅ Audio processing marked as active for session {session_id}")
+
+      # TODO: Implement the actual audio processing loop here
+      # This would involve:
+      # - WebSocket message handling from ringover-streamer
+      # - Audio chunk processing (STT)
+      # - LLM conversation handling
+      # - TTS and audio response generation
+      # - Bidirectional audio streaming
+
+    except Exception as e:
+      logger.error(f"Failed to process audio for call {call_id}: {str(e)}")

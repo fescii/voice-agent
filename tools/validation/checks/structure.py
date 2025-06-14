@@ -1,5 +1,10 @@
 """
-File structure validation for the AI Voice Agent system.
+File structure validation for         "services/tts/elevenlabs.py",
+        "services/stt/whisper.py",
+        # Data layer
+        "data/db/connection.py",
+        "data/redis/connection.py"
+    ]ice Agent system.
 """
 
 from pathlib import Path

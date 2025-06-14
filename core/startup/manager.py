@@ -139,7 +139,6 @@ class StartupManager:
     from .services.telephony import TelephonyService
     from .services.llm import LLMService
     from .services.audio import AudioService
-    from .services.websocket import WebSocketService
     from .services.monitoring import MonitoringService
     from .services.ringover import RingoverService
 
@@ -149,7 +148,6 @@ class StartupManager:
         TelephonyService(),
         LLMService(),
         AudioService(),
-        WebSocketService(),
         MonitoringService(),
         RingoverService()
     ]
@@ -183,14 +181,12 @@ class StartupManager:
     from .services.telephony import TelephonyService
     from .services.llm import LLMService
     from .services.audio import AudioService
-    from .services.websocket import WebSocketService
     from .services.monitoring import MonitoringService
     from .services.ringover import RingoverService
 
     services = [
         RingoverService(),
         MonitoringService(),
-        WebSocketService(),
         AudioService(),
         LLMService(),
         TelephonyService(),
