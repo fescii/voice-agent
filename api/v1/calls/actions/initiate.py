@@ -11,6 +11,7 @@ from api.v1.schemas.response.call import CallInitiateResponse, CallStatus
 from core.config.response import GenericResponse
 from services.call.management.orchestrator import CallOrchestrator
 from core.config.registry import config_registry
+from core.startup.context import get_startup_context
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
 
@@ -21,7 +22,8 @@ router = APIRouter()
 @router.post("/initiate", response_model=GenericResponse[CallInitiateResponse])
 async def initiate_outbound_call(
     request: CallInitiateRequest,
-    current_user: Any = Depends(get_current_user)
+    current_user: Any = Depends(get_current_user),
+    startup_context: Any = Depends(get_startup_context)
 ) -> GenericResponse[CallInitiateResponse]:
   """
   Initiate an outbound call through Ringover
@@ -40,10 +42,10 @@ async def initiate_outbound_call(
     logger.info(
         f"Initiating outbound call to {request.phone_number} for user {current_user}")
 
-    # Initialize call orchestrator with config check
+    # Initialize call orchestrator with startup context
     if not hasattr(config_registry, '_initialized') or not config_registry._initialized:
       config_registry.initialize()
-    call_orchestrator = CallOrchestrator()
+    call_orchestrator = CallOrchestrator(startup_context)
 
     # Use provided agent_id or fall back to default from config
     agent_id = request.agent_id or config_registry.agent.default_agent_id

@@ -184,6 +184,35 @@ class CallOrchestrator:
           "phone_number": phone_number
       }
 
+  async def handle_outbound_call(self, phone_number: str, agent_id: str = "agent_001", user_id: int = 1) -> Optional[str]:
+    """
+    Handle an outbound call request from API endpoint.
+
+    Args:
+        phone_number: Phone number to call
+        agent_id: Agent to handle the call
+        user_id: ID of the user initiating the call
+
+    Returns:
+        Session ID if successful, None if failed
+    """
+    try:
+      result = await self.initiate_outbound_call(
+          user_id=user_id,
+          phone_number=phone_number,
+          agent_id=agent_id
+      )
+
+      if result.get("success"):
+        return result.get("session_id")
+      else:
+        logger.error(f"Failed to handle outbound call: {result.get('error')}")
+        return None
+
+    except Exception as e:
+      logger.error(f"Error in handle_outbound_call: {e}")
+      return None
+
   async def end_call(self, call_id: str) -> Dict[str, Any]:
     """
     End a call and clean up resources.
