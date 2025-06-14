@@ -4,7 +4,7 @@ Read operations for users.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from data.db.models.user import User, UserRole, UserStatus
 from core.logging.setup import get_logger
@@ -14,19 +14,23 @@ logger = get_logger(__name__)
 
 async def get_user_by_id(
     session: AsyncSession,
-    user_id: int
+    user_id: Union[int, str]
 ) -> Optional[User]:
   """
   Get user by ID.
 
   Args:
     session: Database session
-    user_id: User ID
+    user_id: User ID (int or str that can be converted to int)
 
   Returns:
     User object or None if not found
   """
   try:
+    # Convert to int if it's a string
+    if isinstance(user_id, str):
+      user_id = int(user_id)
+
     result = await session.execute(
         select(User).where(User.id == user_id)
     )
@@ -138,7 +142,7 @@ async def get_all_users(
 
     # Apply filters
     if active_only:
-      query = query.where(User.is_active == True)
+      query = query.where(User.status == UserStatus.ACTIVE)
 
     if role:
       from data.db.models.user import UserRole

@@ -5,24 +5,25 @@ Provides WebSocket routes for Ringover media server integration.
 from fastapi import APIRouter, WebSocket, Depends, status, HTTPException
 from services.ringover.streaming.integrated import ringover_streamer_service
 from core.logging.setup import get_logger
+from core.config.response import GenericResponse
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/ringover", tags=["ringover-streaming"])
 
 
-@router.get("/health")
+@router.get("/health", response_model=GenericResponse[dict])
 async def streamer_health():
   """Health check endpoint for the Ringover streamer service."""
-  health_status = ringover_streamer_service.get_health_status()
+  try:
+    health_status = ringover_streamer_service.get_health_status()
 
-  if health_status["status"] != "healthy":
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Ringover streamer service is not healthy"
-    )
+    if health_status["status"] != "healthy":
+      return GenericResponse.error("Ringover streamer service is not healthy", status.HTTP_503_SERVICE_UNAVAILABLE)
 
-  return health_status
+    return GenericResponse.ok(health_status)
+  except Exception as e:
+    return GenericResponse.error(f"Health check failed: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @router.websocket("/ws")

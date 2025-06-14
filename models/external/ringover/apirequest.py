@@ -7,12 +7,15 @@ from typing import Dict, Any, Optional
 
 class RingoverCallRequest(BaseModel):
   """Request model for initiating a call through Ringover"""
-  call_id: str = Field(..., description="Internal call identifier")
-  from_number: str = Field(..., description="Caller ID number")
-  to_number: str = Field(..., description="Target phone number")
-  agent_id: str = Field(..., description="Agent handling the call")
-  context: Dict[str, Any] = Field(
-      default_factory=dict, description="Additional call context")
+  from_number: Optional[int] = Field(
+      None, description="Caller ID number (defaults to user's default number if None)")
+  to_number: int = Field(..., description="Target phone number")
+  timeout: Optional[int] = Field(
+      60, description="Seconds before abort (20-300)", ge=20, le=300)
+  device: Optional[str] = Field(
+      "ALL", description="Device type (ALL, APP, WEB, SIP, MOB, EXT)")
+  clir: Optional[bool] = Field(
+      False, description="Calling line identification restriction")
 
 
 class RingoverTransferRequest(BaseModel):

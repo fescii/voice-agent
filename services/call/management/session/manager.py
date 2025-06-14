@@ -30,7 +30,7 @@ class SessionManager:
     session_id = str(uuid.uuid4())
 
     call_context = CallContext(
-        call_id=call_info.call_id,
+        call_id=str(call_info.call_id),  # Ensure it's a string
         session_id=session_id,
         phone_number=call_info.phone_number,
         agent_id=agent_id,
@@ -39,7 +39,7 @@ class SessionManager:
         start_time=datetime.now(),
         end_time=None,
         duration=None,
-        ringover_call_id=call_info.call_id,
+        ringover_call_id=str(call_info.call_id),  # Ensure it's a string
         websocket_id=None,
         metadata={}
     )

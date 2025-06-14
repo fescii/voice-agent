@@ -11,16 +11,17 @@ from services.agent.profile.loader import AgentProfileLoader
 from data.db.models.agentconfig import AgentConfig
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
+from core.config.response import GenericResponse
 
 logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.get("/{agent_id}", response_model=AgentConfigResponse)
+@router.get("/{agent_id}", response_model=GenericResponse[AgentConfigResponse])
 async def get_agent_config(
     agent_id: str,
     current_user: Any = Depends(get_current_user)
-) -> AgentConfigResponse:
+) -> GenericResponse[AgentConfigResponse]:
   """
   Get configuration for a specific agent
 
@@ -41,29 +42,22 @@ async def get_agent_config(
     agent_config = await loader.get_agent_config(agent_id)
 
     if not agent_config:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail=f"Agent {agent_id} not found"
-      )
+      return GenericResponse.error(f"Agent {agent_id} not found", status.HTTP_404_NOT_FOUND)
 
     logger.info(f"Retrieved config for agent {agent_id}")
 
-    return _agent_config_to_response(agent_config)
+    config_response = _agent_config_to_response(agent_config)
+    return GenericResponse.ok(config_response)
 
-  except HTTPException:
-    raise
   except Exception as e:
     logger.error(f"Failed to get config for agent {agent_id}: {str(e)}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to get agent config: {str(e)}"
-    )
+    return GenericResponse.error(f"Failed to get agent config: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.get("/", response_model=List[AgentConfigResponse])
+@router.get("/", response_model=GenericResponse[List[AgentConfigResponse]])
 async def list_agent_configs(
     current_user: Any = Depends(get_current_user)
-) -> List[AgentConfigResponse]:
+) -> GenericResponse[List[AgentConfigResponse]]:
   """
   List all agent configurations
 
@@ -84,22 +78,19 @@ async def list_agent_configs(
       result.append(_agent_config_to_response(agent))
 
     logger.info(f"Retrieved {len(result)} agent configs")
-    return result
+    return GenericResponse.ok(result)
 
   except Exception as e:
     logger.error(f"Failed to list agent configs: {str(e)}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to list agent configs: {str(e)}"
-    )
+    return GenericResponse.error(f"Failed to list agent configs: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.put("/{agent_id}", response_model=AgentConfigResponse)
+@router.put("/{agent_id}", response_model=GenericResponse[AgentConfigResponse])
 async def update_agent_config(
     agent_id: str,
     request: AgentConfigUpdateRequest,
     current_user: Any = Depends(get_current_user)
-) -> AgentConfigResponse:
+) -> GenericResponse[AgentConfigResponse]:
   """
   Update configuration for a specific agent
 
@@ -122,23 +113,16 @@ async def update_agent_config(
     updated_config = await loader.update_agent_config(agent_id, request.dict(exclude_unset=True))
 
     if not updated_config:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail=f"Agent {agent_id} not found"
-      )
+      return GenericResponse.error(f"Agent {agent_id} not found", status.HTTP_404_NOT_FOUND)
 
     logger.info(f"Updated config for agent {agent_id}")
 
-    return _agent_config_to_response(updated_config)
+    config_response = _agent_config_to_response(updated_config)
+    return GenericResponse.ok(config_response)
 
-  except HTTPException:
-    raise
   except Exception as e:
     logger.error(f"Failed to update config for agent {agent_id}: {str(e)}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to update agent config: {str(e)}"
-    )
+    return GenericResponse.error(f"Failed to update agent config: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 def _agent_config_to_response(agent_config: AgentConfig) -> AgentConfigResponse:

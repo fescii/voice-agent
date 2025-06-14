@@ -8,6 +8,7 @@ from typing import Any
 
 from api.v1.schemas.request.call import CallInitiateRequest
 from api.v1.schemas.response.call import CallInitiateResponse, CallStatus
+from core.config.response import GenericResponse
 from services.call.management.orchestrator import CallOrchestrator
 from core.config.registry import config_registry
 from api.dependencies.auth import get_current_user
@@ -17,11 +18,11 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.post("/initiate", response_model=CallInitiateResponse)
+@router.post("/initiate", response_model=GenericResponse[CallInitiateResponse])
 async def initiate_outbound_call(
     request: CallInitiateRequest,
     current_user: Any = Depends(get_current_user)
-) -> CallInitiateResponse:
+) -> GenericResponse[CallInitiateResponse]:
   """
   Initiate an outbound call through Ringover
 
@@ -54,22 +55,28 @@ async def initiate_outbound_call(
     )
 
     if not session_id:
-      raise HTTPException(
-          status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-          detail="Failed to initiate call - no available agents or configuration error"
+      return GenericResponse.error(
+          message="Failed to initiate call - no available agents or configuration error",
+          status_code=500
       )
 
     logger.info(f"Call initiated successfully with session ID: {session_id}")
 
-    return CallInitiateResponse(
+    response_data = CallInitiateResponse(
         call_id=session_id,
         status=CallStatus.INITIATED,
         message="Call initiated successfully"
     )
 
+    return GenericResponse.ok(
+        data=response_data,
+        status_code=200
+    )
+
   except Exception as e:
     logger.error(f"Failed to initiate outbound call: {str(e)}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to initiate call: {str(e)}"
+    return GenericResponse.error(
+        message="Failed to initiate call",
+        details=str(e),
+        status_code=500
     )

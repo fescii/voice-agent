@@ -36,8 +36,8 @@ class RingoverClient:
     try:
       async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{self.base_url}/calls",
-            json=request.dict(),
+            f"{self.base_url}/callback",
+            json=request.model_dump(exclude_none=True),
             headers=self.headers,
             timeout=30.0
         )

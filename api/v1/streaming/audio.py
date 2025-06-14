@@ -10,6 +10,7 @@ from services.call.management.orchestrator import CallOrchestrator
 from services.ringover.stream import RingoverWebSocketStreamer, AudioFrame
 from core.config.registry import config_registry
 from core.logging.setup import get_logger
+from core.config.response import GenericResponse
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -190,7 +191,7 @@ async def _cleanup_audio_stream(session_id: str):
     logger.error(f"Error during audio streaming cleanup: {e}")
 
 
-@router.post("/{session_id}/control")
+@router.post("/{session_id}/control", response_model=GenericResponse[dict])
 async def audio_control(session_id: str, action: Dict[str, Any]):
   """
   Control audio streaming settings.
@@ -207,50 +208,36 @@ async def audio_control(session_id: str, action: Dict[str, Any]):
     session = await orchestrator.get_session_by_id(session_id)
 
     if not session:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail="Session not found"
-      )
+      return GenericResponse.error("Session not found", status.HTTP_404_NOT_FOUND)
 
     streamer = _active_streamers.get(session_id)
     if not streamer:
-      raise HTTPException(
-          status_code=status.HTTP_400_BAD_REQUEST,
-          detail="No active audio stream for this session"
-      )
+      return GenericResponse.error("No active audio stream for this session", status.HTTP_400_BAD_REQUEST)
 
     action_type = action.get("type")
 
     if action_type == "mute":
       await streamer.mute(session_id)
-      return {"status": "muted"}
+      return GenericResponse.ok({"status": "muted"})
 
     elif action_type == "unmute":
       await streamer.unmute(session_id)
-      return {"status": "unmuted"}
+      return GenericResponse.ok({"status": "unmuted"})
 
     elif action_type == "adjust_volume":
       volume = action.get("volume", 1.0)
       await streamer.set_volume(session_id, volume)
-      return {"status": "volume_adjusted", "volume": volume}
+      return GenericResponse.ok({"status": "volume_adjusted", "volume": volume})
 
     else:
-      raise HTTPException(
-          status_code=status.HTTP_400_BAD_REQUEST,
-          detail=f"Unknown action type: {action_type}"
-      )
+      return GenericResponse.error(f"Unknown action type: {action_type}", status.HTTP_400_BAD_REQUEST)
 
-  except HTTPException:
-    raise
   except Exception as e:
     logger.error(f"Audio control error for session {session_id}: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(e)
-    )
+    return GenericResponse.error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.get("/{session_id}/status")
+@router.get("/{session_id}/status", response_model=GenericResponse[dict])
 async def audio_stream_status(session_id: str):
   """
   Get audio streaming status for a session.
@@ -266,14 +253,11 @@ async def audio_stream_status(session_id: str):
     session = await orchestrator.get_session_by_id(session_id)
 
     if not session:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail="Session not found"
-      )
+      return GenericResponse.error("Session not found", status.HTTP_404_NOT_FOUND)
 
     streamer = _active_streamers.get(session_id)
 
-    return {
+    data = {
         "session_id": session_id,
         "call_id": session.call_info.call_id,
         "streaming_active": streamer is not None,
@@ -281,12 +265,9 @@ async def audio_stream_status(session_id: str):
         "connection_status": "connected" if streamer and streamer.is_connected else "disconnected"
     }
 
-  except HTTPException:
-    raise
+    return GenericResponse.ok(data)
+
   except Exception as e:
     logger.error(
         f"Error getting audio stream status for session {session_id}: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(e)
-    )
+    return GenericResponse.error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)

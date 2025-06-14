@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from data.db.connection import get_db_session
-from data.db.models.user import User
+from data.db.models.user import User, UserStatus
 from data.db.ops.user.read import get_user_by_email, get_user_by_id
 from data.db.ops.user.update import update_user_last_login, update_user_password
 from .password import PasswordService
@@ -43,13 +43,22 @@ class AuthService:
           logger.warning(f"Login attempt with unknown email: {email}")
           return None
 
-        # Check if user is active
-        if not user.is_active:
-          logger.warning(f"Login attempt with inactive user: {email}")
+        # Check if user is active - get the actual value from the user object
+        user_status = getattr(user, 'status', None)
+        logger.info(
+            f"User {email} found with status: {user_status}, email_verified: {getattr(user, 'email_verified', None)}")
+        if not user_status or user_status != UserStatus.ACTIVE:
+          logger.warning(
+              f"Login attempt with inactive user: {email} (status: {user_status})")
           return None
 
-        # Verify password
-        if not self.password_service.verify_password(password, str(user.password_hash)):
+        # Verify password using the user's own verification method
+        logger.info(
+            f"Verifying password for user: {email}, has password_hash: {bool(user.password_hash)}, has salt: {bool(user.salt)}")
+        password_valid = user.verify_password(password)
+        logger.info(
+            f"Password verification result for {email}: {password_valid}")
+        if not password_valid:
           logger.warning(f"Invalid password for user: {email}")
           return None
 
@@ -80,7 +89,7 @@ class AuthService:
                 "email": str(user.email),
                 "full_name": str(user.full_name or ""),
                 "role": user.role.value,
-                "is_active": user.is_active
+                "is_active": getattr(user, 'status', None) == UserStatus.ACTIVE
             }
         }
 
@@ -133,7 +142,7 @@ class AuthService:
       async with get_db_session() as session:
         user = await get_user_by_id(session, payload["sub"])
 
-        if not user or not user.is_active:
+        if not user or getattr(user, 'status', None) != UserStatus.ACTIVE:
           logger.warning(
               f"Refresh token for inactive/missing user: {payload['sub']}")
           return None
@@ -176,7 +185,7 @@ class AuthService:
       async with get_db_session() as session:
         user = await get_user_by_id(session, payload["sub"])
 
-        if not user or not user.is_active:
+        if not user or getattr(user, 'status', None) != UserStatus.ACTIVE:
           return None
 
         return {
@@ -184,7 +193,7 @@ class AuthService:
             "email": str(user.email),
             "full_name": str(user.full_name or ""),
             "role": user.role.value,
-            "is_active": user.is_active
+            "is_active": getattr(user, 'status', None) == UserStatus.ACTIVE
         }
 
     except Exception as e:
@@ -211,15 +220,15 @@ class AuthService:
         if not user:
           return False
 
-        # Verify old password
-        if not self.password_service.verify_password(old_password, str(user.password_hash)):
+        # Verify old password using user's verification method
+        if not user.verify_password(old_password):
           return False
 
-        # Hash new password
-        new_hash = self.password_service.hash_password(new_password)
+        # Set new password using user's method (will handle hashing)
+        user.set_password(new_password)
 
-        # Update password (would need update operation)
-        await update_user_password(session, user_id, new_hash)
+        # Commit the changes
+        await session.commit()
 
         logger.info(f"Password changed for user: {user_id}")
         return True

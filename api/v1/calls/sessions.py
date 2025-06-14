@@ -10,6 +10,7 @@ from services.call.management.session.models import CallSession
 from core.config.registry import config_registry
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
+from core.config.response import GenericResponse
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -29,11 +30,11 @@ def get_orchestrator() -> CallOrchestrator:
   return _orchestrator
 
 
-@router.get("/{session_id}/status")
+@router.get("/{session_id}/status", response_model=GenericResponse[Dict[str, Any]])
 async def get_call_session_status(
     session_id: str,
     current_user: Any = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> GenericResponse[Dict[str, Any]]:
   """
   Get detailed status information for a call session.
 
@@ -49,13 +50,10 @@ async def get_call_session_status(
     session = await orchestrator.get_session_status(session_id)
 
     if not session:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail="Call session not found"
-      )
+      return GenericResponse.error("Call session not found", status.HTTP_404_NOT_FOUND)
 
     # Build comprehensive status response
-    return {
+    data = {
         "session_id": session_id,
         "call_id": session.call_id,
         "agent_id": session.agent_id,
@@ -78,20 +76,17 @@ async def get_call_session_status(
         }
     }
 
-  except HTTPException:
-    raise
+    return GenericResponse.ok(data)
+
   except Exception as e:
     logger.error(f"Error getting call session status for {session_id}: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(e)
-    )
+    return GenericResponse.error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.get("/")
+@router.get("/", response_model=GenericResponse[List[Dict[str, Any]]])
 async def list_active_sessions(
     current_user: Any = Depends(get_current_user)
-) -> List[Dict[str, Any]]:
+) -> GenericResponse[List[Dict[str, Any]]]:
   """
   List all active call sessions.
 
@@ -121,21 +116,18 @@ async def list_active_sessions(
           "last_activity": session.last_activity.isoformat()
       })
 
-    return sessions
+    return GenericResponse.ok(sessions)
 
   except Exception as e:
     logger.error(f"Error listing active sessions: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(e)
-    )
+    return GenericResponse.error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.post("/{session_id}/end")
+@router.post("/{session_id}/end", response_model=GenericResponse[Dict[str, Any]])
 async def end_call_session(
     session_id: str,
     current_user: Any = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> GenericResponse[Dict[str, Any]]:
   """
   End a call session.
 
@@ -152,33 +144,27 @@ async def end_call_session(
     # Check if session exists
     session = await orchestrator.get_session_status(session_id)
     if not session:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail="Call session not found"
-      )
+      return GenericResponse.error("Call session not found", status.HTTP_404_NOT_FOUND)
 
     await orchestrator.end_call(session_id)
 
-    return {
+    data = {
         "session_id": session_id,
         "status": "ended",
         "message": "Call session ended successfully"
     }
 
-  except HTTPException:
-    raise
+    return GenericResponse.ok(data)
+
   except Exception as e:
     logger.error(f"Error ending call session {session_id}: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(e)
-    )
+    return GenericResponse.error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.get("/stats/agents")
+@router.get("/stats/agents", response_model=GenericResponse[Dict[str, Any]])
 async def get_agent_load_stats(
     current_user: Any = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> GenericResponse[Dict[str, Any]]:
   """
   Get agent load and performance statistics.
 
@@ -218,22 +204,19 @@ async def get_agent_load_stats(
           "is_available": current_load < max_concurrent
       })
 
-    return stats
+    return GenericResponse.ok(stats)
 
   except Exception as e:
     logger.error(f"Error getting agent load stats: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(e)
-    )
+    return GenericResponse.error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.post("/{session_id}/script")
+@router.post("/{session_id}/script", response_model=GenericResponse[Dict[str, Any]])
 async def update_session_script(
     session_id: str,
     script_data: Dict[str, Any],
     current_user: Any = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> GenericResponse[Dict[str, Any]]:
   """
   Update the script for a call session.
 
@@ -250,10 +233,7 @@ async def update_session_script(
     session = await orchestrator.get_session_by_id(session_id)
 
     if not session:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail="Call session not found"
-      )
+      return GenericResponse.error("Call session not found", status.HTTP_404_NOT_FOUND)
 
     script_name = script_data.get("script_name")
     if script_name:
@@ -276,18 +256,15 @@ async def update_session_script(
           logger.error(
               f"Error updating script for agent {session.agent_id}: {e}")
 
-    return {
+    data = {
         "session_id": session_id,
         "script_name": session.script_name,
         "status": "updated",
         "message": "Session script updated successfully"
     }
 
-  except HTTPException:
-    raise
+    return GenericResponse.ok(data)
+
   except Exception as e:
     logger.error(f"Error updating session script for {session_id}: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=str(e)
-    )
+    return GenericResponse.error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)

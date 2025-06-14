@@ -14,6 +14,7 @@ from services.ringover.streaming.integration import RingoverStreamerIntegration
 from services.ringover import CallInfo, CallDirection, CallStatus
 from core.config.registry import config_registry
 from core.logging.setup import get_logger
+from core.config.response import GenericResponse
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -63,11 +64,11 @@ def get_webhook_orchestrator() -> RingoverWebhookOrchestrator:
   return _webhook_orchestrator
 
 
-@router.post("/event")
+@router.post("/event", response_model=GenericResponse[dict])
 async def handle_ringover_event(
     request: Request,
     x_ringover_signature: Optional[str] = Header(None)
-) -> dict:
+) -> GenericResponse[dict]:
   """
   Handle incoming Ringover webhook events
 
@@ -88,35 +89,27 @@ async def handle_ringover_event(
     # Verify webhook signature using security service
     if not get_webhook_security().verify_signature(body, x_ringover_signature):
       logger.warning("Invalid webhook signature received")
-      raise HTTPException(
-          status_code=status.HTTP_401_UNAUTHORIZED,
-          detail="Invalid webhook signature"
-      )
+      return GenericResponse.error("Invalid webhook signature", status.HTTP_401_UNAUTHORIZED)
 
     # Parse webhook payload
     payload = await request.json()
     webhook_event = RingoverWebhookEvent(**payload)
 
     logger.info(
-        f"Received Ringover webhook event: {webhook_event.event_type} for call {webhook_event.call_id}")
+        f"Received {webhook_event.event_type} webhook event for call {webhook_event.call_id}")
 
     # Use enhanced webhook orchestrator for event handling
     webhook_orchestrator = get_webhook_orchestrator()
     await webhook_orchestrator.handle_webhook_event(webhook_event)
 
     logger.info(
-        f"Successfully processed webhook event: {webhook_event.event_type}")
+        f"Successfully processed {webhook_event.event_type} webhook event")
 
-    return {"status": "success", "message": "Event processed"}
+    return GenericResponse.ok({"status": "success", "message": "Webhook event processed successfully"})
 
-  except HTTPException:
-    raise
   except Exception as e:
     logger.error(f"Failed to process webhook event: {str(e)}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to process webhook: {str(e)}"
-    )
+    return GenericResponse.error(f"Failed to process webhook: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 def _verify_webhook_signature(body: bytes, signature: Optional[str], secret: str) -> bool:

@@ -5,11 +5,14 @@ Simplified call orchestrator using modular components.
 from typing import Optional, Dict, Any
 from core.logging.setup import get_logger
 from services.ringover.api import CallInfo
+from services.ringover.client import RingoverClient
+from models.external.ringover.apirequest import RingoverCallRequest
 from .session.manager import SessionManager
 from .assignment.manager import AgentAssignmentManager
 from .coordination.manager import CallCoordinationManager
 from .session.models import CallPriority
-
+from core.config.registry import config_registry
+import uuid
 logger = get_logger(__name__)
 
 
@@ -24,6 +27,7 @@ class CallOrchestrator:
     self.session_manager = SessionManager()
     self.assignment_manager = AgentAssignmentManager()
     self.coordination_manager = CallCoordinationManager()
+    self.ringover_client = RingoverClient()
 
   async def handle_inbound_call(self, call_info: CallInfo) -> Optional[str]:
     """
@@ -67,25 +71,83 @@ class CallOrchestrator:
     logger.info(
         f"Initiating outbound call to {phone_number} with agent {agent_id}")
 
-    # Create mock call info for outbound call
-    # In real implementation, this would come from Ringover API
-    from services.ringover import CallDirection, CallStatus
-    call_info = CallInfo(
-        call_id=f"outbound_{phone_number}",
-        phone_number=phone_number,
-        direction=CallDirection.OUTBOUND,
-        status=CallStatus.RINGING
-    )
+    try:
+      # Generate session ID first for call tracking
+      session_id = str(uuid.uuid4())
 
-    # Create call session
-    session_id = await self.session_manager.create_session(
-        call_info=call_info,
-        agent_id=agent_id,
-        priority=CallPriority.NORMAL
-    )
+      # Convert phone numbers to integers (remove + and any non-digits)
+      to_number_str = phone_number.lstrip(
+          '+').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+      to_number_int = int(to_number_str)
 
-    logger.info(f"Created outbound session {session_id}")
-    return session_id
+      # Get from_number as integer (if configured)
+      from_number_int = None
+      if hasattr(config_registry.ringover, 'default_caller_id') and config_registry.ringover.default_caller_id:
+        from_caller_str = str(config_registry.ringover.default_caller_id).lstrip(
+            '+').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        from_number_int = int(from_caller_str)
+
+      # Create Ringover API request with correct format
+      ringover_request = RingoverCallRequest(
+          from_number=from_number_int,  # Will use default if None
+          to_number=to_number_int,
+          timeout=60,  # 60 seconds timeout
+          device="ALL",  # Use all available devices
+          clir=False  # Don't restrict caller ID
+      )
+
+      # Actually initiate the call through Ringover API
+      logger.info(f"Making actual Ringover API call to {phone_number}")
+      ringover_response = await self.ringover_client.initiate_call(ringover_request)
+      logger.info(f"Ringover API response: {ringover_response}")
+
+      # Parse the response - callback API should return call_id and channel_id
+      ringover_call_id = None
+      if isinstance(ringover_response, dict):
+        # Direct callback response
+        if "call_id" in ringover_response:
+          ringover_call_id = ringover_response["call_id"]
+        # If it returned call history instead (error case)
+        elif "call_list" in ringover_response and ringover_response["call_list"]:
+          logger.warning(
+              "Received call history instead of callback response - using latest call")
+          # Get the most recent call
+          latest_call = ringover_response["call_list"][0]
+          ringover_call_id = latest_call.get("call_id")
+
+      # Fallback to session_id if no call_id found
+      if not ringover_call_id:
+        logger.warning("No call_id found in response, using session_id")
+        ringover_call_id = session_id
+
+      # Ensure call_id is a string
+      if isinstance(ringover_call_id, int):
+        ringover_call_id = str(ringover_call_id)
+
+      # Create call info from Ringover response
+      from services.ringover import CallDirection, CallStatus
+      call_info = CallInfo(
+          call_id=ringover_call_id,
+          phone_number=phone_number,
+          direction=CallDirection.OUTBOUND,
+          status=CallStatus.RINGING
+      )
+
+      # Create call session
+      final_session_id = await self.session_manager.create_session(
+          call_info=call_info,
+          agent_id=agent_id,
+          priority=CallPriority.NORMAL
+      )
+
+      logger.info(
+          f"Created outbound session {final_session_id} with Ringover call ID {call_info.call_id}")
+      return final_session_id
+
+    except Exception as e:
+      logger.error(
+          f"Failed to initiate outbound call to {phone_number}: {str(e)}")
+      return None
 
   async def end_call(self, session_id: str):
     """End a call session."""

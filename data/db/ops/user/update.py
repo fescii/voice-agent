@@ -4,13 +4,20 @@ Update operations for users.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import update, select
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from datetime import datetime, timezone
 
-from data.db.models.user import User
+from data.db.models.user import User, UserStatus
 from core.logging.setup import get_logger
 
 logger = get_logger(__name__)
+
+
+def _convert_user_id(user_id: Union[str, int]) -> int:
+  """Convert user_id to integer if it's a string."""
+  if isinstance(user_id, str):
+    return int(user_id)
+  return user_id
 
 
 async def update_user(
@@ -30,17 +37,20 @@ async def update_user(
     Updated User object or None if failed
   """
   try:
+    # Convert user_id to integer
+    user_id_int = _convert_user_id(user_id)
+
     # Update the user
     await session.execute(
         update(User)
-        .where(User.id == user_id)
+        .where(User.id == user_id_int)
         .values(**kwargs)
     )
     await session.commit()
 
     # Return updated user
     result = await session.execute(
-        select(User).where(User.id == user_id)
+        select(User).where(User.id == user_id_int)
     )
     user = result.scalar_one_or_none()
 
@@ -48,6 +58,10 @@ async def update_user(
       logger.info(f"Updated user: {user.username}")
 
     return user
+
+  except ValueError as e:
+    logger.error(f"Invalid user ID format {user_id}: {e}")
+    return None
 
   except SQLAlchemyError as e:
     logger.error(f"Failed to update user {user_id}: {e}")
@@ -76,9 +90,12 @@ async def update_user_password(
     True if successful, False otherwise
   """
   try:
+    # Convert user_id to integer
+    user_id_int = _convert_user_id(user_id)
+
     # Get the user
     result = await session.execute(
-        select(User).where(User.id == user_id)
+        select(User).where(User.id == user_id_int)
     )
     user = result.scalar_one_or_none()
 
@@ -90,9 +107,16 @@ async def update_user_password(
     user.set_password(new_password)
     await session.commit()
 
-    logger.info(f"Updated password for user: {user.username}")
+    logger.info(f"Password updated for user: {user_id}")
     return True
 
+  except ValueError as e:
+    logger.error(f"Invalid user ID format {user_id}: {e}")
+    return False
+  except SQLAlchemyError as e:
+    logger.error(f"Failed to update password for user {user_id}: {e}")
+    await session.rollback()
+    return False
   except Exception as e:
     logger.error(f"Error updating password for user {user_id}: {e}")
     await session.rollback()
@@ -228,14 +252,20 @@ async def update_user_last_login(
       True if successful, False otherwise
   """
   try:
-    stmt = update(User).where(User.id == user_id).values(
-        last_login=datetime.now(timezone.utc)
+    # Convert string ID to integer
+    user_id_int = _convert_user_id(user_id)
+
+    stmt = update(User).where(User.id == user_id_int).values(
+        last_login=datetime.now()  # Use timezone-naive datetime
     )
     await session.execute(stmt)
     await session.commit()
     logger.info(f"Updated last login for user: {user_id}")
     return True
 
+  except ValueError as e:
+    logger.error(f"Invalid user ID format {user_id}: {e}")
+    return False
   except SQLAlchemyError as e:
     logger.error(f"Failed to update last login for user {user_id}: {e}")
     await session.rollback()
@@ -298,18 +328,21 @@ async def update_user_status(
   Args:
       session: Database session
       user_id: User ID to update
-      is_active: Active status
-      is_verified: Verified status
+      is_active: Active status (converted to UserStatus.ACTIVE/INACTIVE)
+      is_verified: Verified status (email_verified field)
 
   Returns:
       True if successful, False otherwise
   """
   try:
     update_data = {}
+
     if is_active is not None:
-      update_data["is_active"] = is_active
+      # Convert boolean to UserStatus enum
+      update_data["status"] = UserStatus.ACTIVE if is_active else UserStatus.INACTIVE
+
     if is_verified is not None:
-      update_data["is_verified"] = is_verified
+      update_data["email_verified"] = is_verified
 
     if not update_data:
       return True  # Nothing to update
@@ -318,15 +351,10 @@ async def update_user_status(
     result = await session.execute(stmt)
     await session.commit()
 
-    if result.rowcount == 0:
-      logger.warning(f"No user found with ID: {user_id}")
-      return False
-
-    logger.info(f"Updated status for user: {user_id}")
-    return True
+    return result.rowcount > 0
 
   except SQLAlchemyError as e:
-    logger.error(f"Failed to update status for user {user_id}: {e}")
+    logger.error(f"Failed to update user status {user_id}: {e}")
     await session.rollback()
     return False
   except Exception as e:

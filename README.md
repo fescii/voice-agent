@@ -241,11 +241,57 @@ cp .env.example .env
 
 4. **Start Application**:
 
+There are several ways to run the application:
+
+**Option 1: Using the run script (Easiest)**
+```bash
+# Development mode (default)
+python run.py
+
+# Production mode with workers
+python run.py --workers 4 --no-reload --log-level warning
+
+# Custom host/port
+python run.py --host 127.0.0.1 --port 8080
+
+# See all options
+python run.py --help
+```
+
+**Option 2: Direct Python execution (Development)**
 ```bash
 python main.py
 ```
 
+**Option 3: Using uvicorn directly (Recommended)**
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+**Option 4: Using uvicorn with custom configuration**
+```bash
+# Development with auto-reload
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload --log-level info
+
+# Production-like setup
+uvicorn main:app --host 0.0.0.0 --port 8001 --workers 1 --log-level warning
+```
+
+**Option 5: Using uvicorn with environment file**
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8001 --env-file .env --reload
+```
+
 **Application runs on: <http://0.0.0.0:8001>**
+
+### Running Options Explained
+
+- **`python run.py`**: Custom script with sensible defaults and easy configuration
+- **`python main.py`**: Uses the built-in uvicorn configuration with reload enabled
+- **`uvicorn main:app`**: Standard ASGI server approach, more control over configuration  
+- **`--reload`**: Automatically restarts server when code changes (development only)
+- **`--workers N`**: Run multiple worker processes (production, don't use with --reload)
+- **`--env-file .env`**: Explicitly load environment variables from .env file
 
 ## ✅ Current Status
 

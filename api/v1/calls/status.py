@@ -8,6 +8,7 @@ from api.v1.schemas.response.call import CallStatusResponse, CallStatus
 from services.call.state.manager import CallStateManager, CallState
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
+from core.config.response import GenericResponse
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -30,11 +31,11 @@ def map_call_state_to_status(call_state: CallState) -> CallStatus:
   return mapping.get(call_state, CallStatus.INITIATED)
 
 
-@router.get("/{call_id}/status", response_model=CallStatusResponse)
+@router.get("/{call_id}/status", response_model=GenericResponse[CallStatusResponse])
 async def get_call_status(
     call_id: str,
     current_user: Any = Depends(get_current_user)
-) -> CallStatusResponse:
+) -> GenericResponse[CallStatusResponse]:
   """
   Get the current status of a call
 
@@ -55,15 +56,12 @@ async def get_call_status(
     call_state = await manager.get_state(call_id)
 
     if not call_state:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail=f"Call {call_id} not found"
-      )
+      return GenericResponse.error(f"Call {call_id} not found", status.HTTP_404_NOT_FOUND)
 
     logger.info(f"Retrieved status for call {call_id}: {call_state.state}")
 
     # Map CallState to CallStatus and handle missing fields
-    return CallStatusResponse(
+    call_status_response = CallStatusResponse(
         call_id=call_id,
         status=map_call_state_to_status(call_state.state),
         agent_id=call_state.agent_id or "unknown",  # Handle None
@@ -73,11 +71,8 @@ async def get_call_status(
         metadata=call_state.metadata
     )
 
-  except HTTPException:
-    raise
+    return GenericResponse.ok(call_status_response)
+
   except Exception as e:
     logger.error(f"Failed to get status for call {call_id}: {str(e)}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to get call status: {str(e)}"
-    )
+    return GenericResponse.error(f"Failed to get call status: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -9,16 +9,17 @@ from api.v1.schemas.response.call import CallMuteResponse
 from services.call.state.manager import CallStateManager, CallState
 from api.dependencies.auth import get_current_user
 from core.logging.setup import get_logger
+from core.config.response import GenericResponse
 
 logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.post("/mute", response_model=CallMuteResponse)
+@router.post("/mute", response_model=GenericResponse[CallMuteResponse])
 async def mute_call(
     request: CallMuteRequest,
     current_user: Any = Depends(get_current_user)
-) -> CallMuteResponse:
+) -> GenericResponse[CallMuteResponse]:
   """
   Mute or unmute an active call
 
@@ -41,10 +42,7 @@ async def mute_call(
     # Get current state first to validate call exists
     current_state_info = await manager.get_state(request.call_id)
     if not current_state_info:
-      raise HTTPException(
-          status_code=status.HTTP_404_NOT_FOUND,
-          detail=f"Call {request.call_id} not found"
-      )
+      return GenericResponse.error(f"Call {request.call_id} not found", status.HTTP_404_NOT_FOUND)
 
     # Update state based on mute request
     new_state = CallState.MUTED if request.muted else CallState.CONNECTED
@@ -56,17 +54,16 @@ async def mute_call(
 
     logger.info(f"Call {request.call_id} mute status set to {request.muted}")
 
-    return CallMuteResponse(
+    mute_response = CallMuteResponse(
         call_id=request.call_id,
         muted=request.muted,
         status="success",
         message=f"Call {'muted' if request.muted else 'unmuted'} successfully"
     )
 
+    return GenericResponse.ok(mute_response)
+
   except Exception as e:
     logger.error(
         f"Failed to set mute status for call {request.call_id}: {str(e)}")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Failed to set mute status: {str(e)}"
-    )
+    return GenericResponse.error(f"Failed to set mute status: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)
