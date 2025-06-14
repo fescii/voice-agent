@@ -138,6 +138,8 @@ class StartupManager:
     from .services.redis import RedisService
     from .services.telephony import TelephonyService
     from .services.llm import LLMService
+    from .services.stt import STTService
+    from .services.tts import TTSService
     from .services.audio import AudioService
     from .services.monitoring import MonitoringService
     from .services.ringover import RingoverService
@@ -147,6 +149,8 @@ class StartupManager:
         RedisService(),
         TelephonyService(),
         LLMService(),
+        STTService(),
+        TTSService(),
         AudioService(),
         MonitoringService(),
         RingoverService()
@@ -180,6 +184,8 @@ class StartupManager:
     from .services.redis import RedisService
     from .services.telephony import TelephonyService
     from .services.llm import LLMService
+    from .services.stt import STTService
+    from .services.tts import TTSService
     from .services.audio import AudioService
     from .services.monitoring import MonitoringService
     from .services.ringover import RingoverService
@@ -188,6 +194,8 @@ class StartupManager:
         RingoverService(),
         MonitoringService(),
         AudioService(),
+        TTSService(),
+        STTService(),
         LLMService(),
         TelephonyService(),
         RedisService(),

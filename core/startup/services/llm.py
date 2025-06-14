@@ -46,7 +46,8 @@ class LLMService(BaseStartupService):
           "available_providers": available_providers,
           "default_provider": "openai",
           "test_response": response.choices[0].message.content if response else "No response",
-          "status": "initialized"
+          "status": "initialized",
+          "service": self._orchestrator
       }
 
     except Exception as e:

@@ -1,7 +1,7 @@
 """
 Handles incoming Ringover webhook events with enhanced orchestration.
 """
-from fastapi import APIRouter, Request, HTTPException, status, Header
+from fastapi import APIRouter, Request, HTTPException, status, Header, Depends
 from typing import Optional
 import hmac
 import hashlib
@@ -13,6 +13,7 @@ from services.ringover.webhooks.security import WebhookSecurity
 from services.ringover.streaming.integration import RingoverStreamerIntegration
 from services.ringover import CallInfo, CallDirection, CallStatus
 from core.config.registry import config_registry
+from core.startup.context import get_startup_context
 from core.logging.setup import get_logger
 from core.config.response import GenericResponse
 
@@ -34,14 +35,14 @@ def get_webhook_security() -> WebhookSecurity:
   return _webhook_security
 
 
-def get_orchestrator() -> CallOrchestrator:
-  """Get or create call orchestrator instance."""
+def get_orchestrator(startup_context=None) -> CallOrchestrator:
+  """Get or create call orchestrator instance with startup context."""
   global _orchestrator
   if _orchestrator is None:
     # Ensure config registry is initialized before creating orchestrator
     if not hasattr(config_registry, '_initialized') or not config_registry._initialized:
       config_registry.initialize()
-    _orchestrator = CallOrchestrator()
+    _orchestrator = CallOrchestrator(startup_context)
   return _orchestrator
 
 
@@ -67,7 +68,8 @@ def get_webhook_orchestrator() -> RingoverWebhookOrchestrator:
 @router.post("/event", response_model=GenericResponse[dict])
 async def handle_ringover_event(
     request: Request,
-    x_ringover_signature: Optional[str] = Header(None)
+    x_ringover_signature: Optional[str] = Header(None),
+    startup_context=Depends(get_startup_context)
 ) -> GenericResponse[dict]:
   """
   Handle incoming Ringover webhook events
@@ -99,6 +101,8 @@ async def handle_ringover_event(
         f"Received {webhook_event.event_type} webhook event for call {webhook_event.call_id}")
 
     # Use enhanced webhook orchestrator for event handling
+    # Pass startup context to the orchestrator
+    orchestrator = get_orchestrator(startup_context)
     webhook_orchestrator = get_webhook_orchestrator()
     await webhook_orchestrator.handle_webhook_event(webhook_event)
 
