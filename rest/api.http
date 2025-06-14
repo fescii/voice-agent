@@ -1,0 +1,259 @@
+### Voice Agent API - HTTP Client Tests
+### Base URL: http://localhost:8000
+
+# Variables
+@baseUrl = http://localhost:8000
+@apiVersion = v1
+@token = your_auth_token_here
+@agentId = agent_001
+@phoneNumber = +1234567890
+
+# Note: agent_id is now optional in call initiation requests
+# If not provided, the system will use DEFAULT_AGENT_ID from .env configuration
+
+### ===================================
+### AUTHENTICATION & HEALTH
+### ===================================
+
+### Health Check
+GET {{baseUrl}}/health
+
+### ===================================
+### CALL INITIATION
+### ===================================
+
+### Initiate Outbound Call (with specific agent)
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/initiate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "phone_number": "{{phoneNumber}}",
+  "agent_id": "{{agentId}}",
+  "caller_id": "+1987654321",
+  "context": {
+    "customer_id": "cust_123",
+    "campaign": "follow_up",
+    "priority": "high"
+  }
+}
+
+### Initiate Call using Default Agent (from .env config)
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/initiate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "phone_number": "{{phoneNumber}}",
+  "caller_id": "+1987654321",
+  "context": {
+    "customer_id": "cust_456",
+    "campaign": "cold_call"
+  }
+}
+
+### Initiate Call with Minimal Data (uses default agent from .env)
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/initiate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "phone_number": "+15551234567"
+}
+
+### Initiate Call with Specific Agent
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/initiate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "phone_number": "+15551234567",
+  "agent_id": "agent_002"
+}
+
+### ===================================
+### CALL MANAGEMENT
+### ===================================
+
+### Get Call Status
+GET {{baseUrl}}/api/{{apiVersion}}/calls/call_123/status
+Authorization: Bearer {{token}}
+
+### Terminate Call
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/terminate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "call_id": "call_123",
+  "reason": "User requested termination"
+}
+
+### Transfer Call
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/transfer
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "call_id": "call_123",
+  "target_number": "+15559876543",
+  "transfer_type": "blind"
+}
+
+### Mute Call
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/mute
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "call_id": "call_123",
+  "muted": true
+}
+
+### Unmute Call
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/mute
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "call_id": "call_123",
+  "muted": false
+}
+
+### ===================================
+### CALL SESSIONS
+### ===================================
+
+### Get Active Sessions
+GET {{baseUrl}}/api/{{apiVersion}}/calls/sessions/active
+Authorization: Bearer {{token}}
+
+### Get Session Details
+GET {{baseUrl}}/api/{{apiVersion}}/calls/sessions/session_123
+Authorization: Bearer {{token}}
+
+### ===================================
+### SYSTEM OPERATIONS
+### ===================================
+
+### Get System Status
+GET {{baseUrl}}/api/{{apiVersion}}/calls/system/status
+Authorization: Bearer {{token}}
+
+### Get Call Metrics
+GET {{baseUrl}}/api/{{apiVersion}}/calls/system/metrics
+Authorization: Bearer {{token}}
+
+### ===================================
+### WEBHOOKS (for testing webhook endpoints)
+### ===================================
+
+### Simulate Ringover Webhook - Call Started
+POST {{baseUrl}}/api/{{apiVersion}}/webhooks/ringover
+Content-Type: application/json
+X-Ringover-Signature: test_signature
+
+{
+  "event_type": "call.started",
+  "call_id": "ringover_call_123",
+  "timestamp": "2025-06-14T10:30:00Z",
+  "data": {
+    "from": "+15551234567",
+    "to": "+15559876543",
+    "direction": "outbound"
+  }
+}
+
+### Simulate Ringover Webhook - Call Answered
+POST {{baseUrl}}/api/{{apiVersion}}/webhooks/ringover
+Content-Type: application/json
+X-Ringover-Signature: test_signature
+
+{
+  "event_type": "call.answered",
+  "call_id": "ringover_call_123",
+  "timestamp": "2025-06-14T10:30:15Z",
+  "data": {
+    "answered_at": "2025-06-14T10:30:15Z"
+  }
+}
+
+### Simulate Ringover Webhook - Call Ended
+POST {{baseUrl}}/api/{{apiVersion}}/webhooks/ringover
+Content-Type: application/json
+X-Ringover-Signature: test_signature
+
+{
+  "event_type": "call.ended",
+  "call_id": "ringover_call_123",
+  "timestamp": "2025-06-14T10:35:00Z",
+  "data": {
+    "duration": 285,
+    "end_reason": "completed"
+  }
+}
+
+### ===================================
+### ERROR TESTING
+### ===================================
+
+### Test Invalid Phone Number
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/initiate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "phone_number": "invalid_number",
+  "agent_id": "{{agentId}}"
+}
+
+### Test Missing Agent
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/initiate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "phone_number": "{{phoneNumber}}"
+}
+
+### Test Non-existent Call Status
+GET {{baseUrl}}/api/{{apiVersion}}/calls/non_existent_call/status
+Authorization: Bearer {{token}}
+
+### Test Unauthorized Request
+GET {{baseUrl}}/api/{{apiVersion}}/calls/system/status
+
+### ===================================
+### BATCH OPERATIONS (if implemented)
+### ===================================
+
+### Initiate Multiple Calls
+POST {{baseUrl}}/api/{{apiVersion}}/calls/actions/batch/initiate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "calls": [
+    {
+      "phone_number": "+15551111111",
+      "agent_id": "agent_001",
+      "context": {"campaign": "batch_1"}
+    },
+    {
+      "phone_number": "+15552222222",
+      "agent_id": "agent_002",
+      "context": {"campaign": "batch_1"}
+    }
+  ]
+}
+
+### ===================================
+### NOTES
+### ===================================
+
+# 1. Replace {{token}} with actual authentication token
+# 2. Update {{baseUrl}} if running on different host/port
+# 3. Replace call_id values with actual call IDs from responses
+# 4. Ensure the API server is running before testing
+# 5. Check logs for detailed error information
+# 6. Use proper phone number formats (+E.164)

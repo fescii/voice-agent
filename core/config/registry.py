@@ -12,6 +12,7 @@ from .providers.ai import LLMConfig, STTConfig, TTSConfig, LLMProvider, STTProvi
 from .providers.database import DatabaseConfig
 from .providers.redis import RedisConfig
 from .providers.security import SecurityConfig
+from .providers.agent import AgentConfig
 from .websocket import WebSocketConfig
 
 
@@ -46,6 +47,7 @@ class ConfigRegistry:
           'database': DatabaseConfig(),
           'redis': RedisConfig(),
           'security': SecurityConfig(),
+          'agent': AgentConfig(),
           'llm': self._create_llm_config(),
           'stt': self._create_stt_config(),
           'tts': self._create_tts_config(),
@@ -93,6 +95,11 @@ class ConfigRegistry:
   def security(self) -> SecurityConfig:
     """Get Security configuration"""
     return self._configs['security']
+
+  @property
+  def agent(self) -> AgentConfig:
+    """Get Agent configuration"""
+    return self._configs['agent']
 
   def get_config(self, name: str) -> Any:
     """Get configuration by name"""

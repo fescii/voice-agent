@@ -1,6 +1,7 @@
 """
 Endpoint for initiating outbound calls
 """
+import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from typing import Any
@@ -43,10 +44,13 @@ async def initiate_outbound_call(
       config_registry.initialize()
     call_orchestrator = CallOrchestrator()
 
+    # Use provided agent_id or fall back to default from config
+    agent_id = request.agent_id or config_registry.agent.default_agent_id
+
     # Initiate outbound call
     session_id = await call_orchestrator.handle_outbound_call(
         phone_number=request.phone_number,
-        agent_id=request.agent_id
+        agent_id=agent_id
     )
 
     if not session_id:

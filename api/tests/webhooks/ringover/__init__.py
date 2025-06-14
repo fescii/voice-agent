@@ -1,3 +1,0 @@
-"""
-Ringover webhook API tests.
-"""

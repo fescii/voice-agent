@@ -14,7 +14,8 @@ class TransferType(str, Enum):
 class CallInitiateRequest(BaseModel):
   """Request schema for initiating an outbound call"""
   phone_number: str = Field(..., description="Target phone number to call")
-  agent_id: str = Field(..., description="ID of the agent to handle the call")
+  agent_id: Optional[str] = Field(
+      None, description="ID of the agent to handle the call (uses default if not provided)")
   caller_id: Optional[str] = Field(None, description="Caller ID to display")
   context: Optional[Dict[str, Any]] = Field(
       default_factory=dict, description="Additional context for the call")
